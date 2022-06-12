@@ -1,0 +1,110 @@
+11:11:58 **** Incremental Build of configuration Debug for project I2C_TEST001 ****
+make -j8 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F429xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function '__io_putchar':
+../Core/Src/main.c:86:29: warning: passing argument 2 of 'HAL_UART_Transmit' from incompatible pointer type [-Wincompatible-pointer-types]
+   86 |  HAL_UART_Transmit(&huart3, &ch, 1, 100);
+      |                             ^~~
+      |                             |
+      |                             int *
+In file included from ../Core/Inc/stm32f4xx_hal_conf.h:407,
+                 from ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:29,
+                 from ../Core/Inc/main.h:30,
+                 from ../Core/Src/main.c:20:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:722:79: note: expected 'const uint8_t *' {aka 'const unsigned char *'} but argument is of type 'int *'
+  722 | HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *huart, const uint8_t *pData, uint16_t Size, uint32_t Timeout);
+      |                                                                ~~~~~~~~~~~~~~~^~~~~
+../Core/Src/main.c: In function 'I2C_Scan':
+../Core/Src/main.c:114:13: warning: implicit declaration of function 'snprintf' [-Wimplicit-function-declaration]
+  114 |             snprintf(msg, sizeof(msg), "0x%02X", i);
+      |             ^~~~~~~~
+../Core/Src/main.c:114:13: warning: incompatible implicit declaration of built-in function 'snprintf'
+../Core/Src/main.c:96:1: note: include '<stdio.h>' or provide a declaration of 'snprintf'
+   95 | #include <string.h>
+  +++ |+#include <stdio.h>
+   96 | 
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:250:3: warning: implicit declaration of function 'sprintf' [-Wimplicit-function-declaration]
+  250 |   sprintf(Time," %s %02x : %02x : %02x", ampm[sTime.TimeFormat], sTime.Hours, sTime.Minutes, sTime.Seconds);
+      |   ^~~~~~~
+../Core/Src/main.c:250:3: warning: incompatible implicit declaration of built-in function 'sprintf'
+../Core/Src/main.c:250:3: note: include '<stdio.h>' or provide a declaration of 'sprintf'
+../Core/Src/main.c:263:4: warning: implicit declaration of function 'printf' [-Wimplicit-function-declaration]
+  263 |    printf("UP\r\n");
+      |    ^~~~~~
+../Core/Src/main.c:263:4: warning: incompatible implicit declaration of built-in function 'printf'
+../Core/Src/main.c:263:4: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:266:4: warning: incompatible implicit declaration of built-in function 'printf'
+  266 |    printf("DOWN\r\n");
+      |    ^~~~~~
+../Core/Src/main.c:266:4: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:271:4: warning: incompatible implicit declaration of built-in function 'printf'
+  271 |    printf("LEFT\r\n");
+      |    ^~~~~~
+../Core/Src/main.c:271:4: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:276:4: warning: incompatible implicit declaration of built-in function 'printf'
+  276 |    printf("RIGHT\r\n");
+      |    ^~~~~~
+../Core/Src/main.c:276:4: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:282:7: warning: incompatible implicit declaration of built-in function 'printf'
+  282 |       printf("SELECT\r\n");
+      |       ^~~~~~
+../Core/Src/main.c:282:7: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:295:5: warning: incompatible implicit declaration of built-in function 'printf'
+  295 |     printf("UP\r\n");
+      |     ^~~~~~
+../Core/Src/main.c:295:5: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:299:5: warning: incompatible implicit declaration of built-in function 'printf'
+  299 |     printf("DOWN : %d \r\n", mode);
+      |     ^~~~~~
+../Core/Src/main.c:299:5: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:304:5: warning: incompatible implicit declaration of built-in function 'printf'
+  304 |     printf("LEFT\r\n");
+      |     ^~~~~~
+../Core/Src/main.c:304:5: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:309:5: warning: incompatible implicit declaration of built-in function 'printf'
+  309 |     printf("RIGHT\r\n");
+      |     ^~~~~~
+../Core/Src/main.c:309:5: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:313:8: warning: incompatible implicit declaration of built-in function 'printf'
+  313 |        printf("SELECT\r\n");
+      |        ^~~~~~
+../Core/Src/main.c:313:8: note: include '<stdio.h>' or provide a declaration of 'printf'
+../Core/Src/main.c:321:11: warning: passing argument 1 of 'sprintf' from incompatible pointer type [-Wincompatible-pointer-types]
+  321 |   sprintf(buf, "%d\r\n", adc_value);
+      |           ^~~
+      |           |
+      |           uint32_t * {aka long unsigned int *}
+../Core/Src/main.c:321:11: note: expected 'char *' but argument is of type 'uint32_t *' {aka 'long unsigned int *'}
+../Core/Src/main.c:321:18: warning: format '%d' expects argument of type 'int', but argument 3 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  321 |   sprintf(buf, "%d\r\n", adc_value);
+      |                 ~^       ~~~~~~~~~
+      |                  |       |
+      |                  int     uint32_t {aka long unsigned int}
+      |                 %ld
+../Core/Src/main.c:322:33: warning: passing argument 2 of 'HAL_UART_Transmit_IT' from incompatible pointer type [-Wincompatible-pointer-types]
+  322 |   HAL_UART_Transmit_IT(&huart3, buf, sizeof(buf));
+      |                                 ^~~
+      |                                 |
+      |                                 uint32_t * {aka long unsigned int *}
+In file included from ../Core/Inc/stm32f4xx_hal_conf.h:407,
+                 from ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:29,
+                 from ../Core/Inc/main.h:30,
+                 from ../Core/Src/main.c:20:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:724:82: note: expected 'const uint8_t *' {aka 'const unsigned char *'} but argument is of type 'uint32_t *' {aka 'long unsigned int *'}
+  724 | HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *huart, const uint8_t *pData, uint16_t Size);
+      |                                                                   ~~~~~~~~~~~~~~~^~~~~
+arm-none-eabi-gcc -o "I2C_TEST001.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\workspace_stm32\I2C_TEST001\STM32F429ZITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="I2C_TEST001.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: I2C_TEST001.elf
+ 
+arm-none-eabi-size   I2C_TEST001.elf 
+arm-none-eabi-objdump -h -S  I2C_TEST001.elf  > "I2C_TEST001.list"
+   text	   data	    bss	    dec	    hex	filename
+  26872	    128	   2056	  29056	   7180	I2C_TEST001.elf
+Finished building: default.size.stdout
+ 
+Finished building: I2C_TEST001.list
+ 
+
+11:12:00 Build Finished. 0 errors, 19 warnings. (took 1s.984ms)
+
