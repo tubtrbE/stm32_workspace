@@ -57,7 +57,13 @@ typedef enum
 
 	//LCD variable
 	uint8_t row;
+	uint8_t rising_edge = 0;
+	uint8_t falling_edge = 0;
 	uint8_t mode = 0;
+	uint32_t start_tick = 0;
+	uint32_t cur_tick = 0;
+	uint32_t tick_gap = 0;
+	uint8_t pin_status[2] = {0};
 
 
 	//ADC variable
@@ -278,7 +284,6 @@ int main(void)
 
 	    if (button_status(adc_value) == SELECT) {
 	    	LCD_SendString(LCD_ADDR, Time);
-	    	mode++;
 	    	printf("SELECT\r\n");
 	    }
 
@@ -317,9 +322,43 @@ int main(void)
 			HAL_Delay(1000);
 	    }
 
+
+
+	    //mode 를 정해주는 while loop
+	    while (rising_edge >= 1) {
+	    	cur_tick = HAL_GetTick();
+	    	tick_gap = cur_tick - start_tick;
+
+	    	if (tick_gap >= 300) {
+
+	    		if (rising_edge == 1 && falling_edge >= 1) {
+		    		rising_edge = 0;
+		    		falling_edge = 0;
+	    			printf("one click==========================\r\n");
+	    		}
+	    		if (rising_edge >= 2 && falling_edge >= 1) {
+		    		rising_edge = 0;
+		    		falling_edge = 0;
+	    			printf("two click++++++++++++++++++++++++++\r\n");
+	    		}
+		    	if (tick_gap >= 2000 && falling_edge == 0) {
+		    		rising_edge = 0;
+		    		falling_edge = 0;
+	    			printf("long click//////////////////////////\r\n");
+		    	}
+	    	}
+	    	HAL_Delay(100);
+	    }
+
 		memset(buf, 0, sizeof(buf));
 		sprintf(buf, "%d\r\n", adc_value);
-		HAL_UART_Transmit_IT(&huart3, buf, sizeof(buf));
+//		HAL_UART_Transmit_IT(&huart3, buf, sizeof(buf));
+
+//		if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 1) {
+//			printf("rising edge\r\n");
+//			mode_select = 1;
+//	    	start_tick = HAL_GetTick();
+//		}
 
 		HAL_Delay(100);
 
@@ -411,14 +450,22 @@ ADC_StatusTypeDef button_status(uint32_t value) {
 	return NONE;
 }
 
-// callback 추가
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(GPIO_Pin);
-  /* NOTE: This function Should not be modified, when the callback is needed,
-           the HAL_GPIO_EXTI_Callback could be implemented in the user file
-   */
+
+	 // rising edge
+	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 1) {
+		rising_edge++;
+		printf("rising edge : %d\r\n", rising_edge);
+    	start_tick = HAL_GetTick();
+	}
+
+	// falling edge
+	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 0) {
+		falling_edge++;
+		printf("falling edge : %d\r\n", falling_edge);
+	}
+
 }
 /* USER CODE END 4 */
 
