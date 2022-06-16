@@ -46,6 +46,7 @@
 
 /* USER CODE BEGIN PV */
 	uint8_t count = 0;
+	uint8_t buf[20];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,7 +71,8 @@ int __io_putchar(int ch) {
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	// 1byte 씩 읽고 싶으면 uint8_t
+	uint32_t *flash_adder,i;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -98,6 +100,12 @@ int main(void)
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
+	flash_adder = (uint32_t *)0x08000000;
+
+	for (i = 0; i < 10; i++) {
+		memset(buf, 0, sizeof(buf));
+		sprintf(buf, "%08X ")
+	}
 
   /* USER CODE END 2 */
 

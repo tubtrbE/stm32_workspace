@@ -1,44 +1,45 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2022 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2022 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
 #include "i2c.h"
 #include "rtc.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef enum
-{
-  NONE  = 0x00U,
-  SELECT= 0x01U,
-  UP    = 0x02U,
-  DOWN  = 0x03U,
-  LEFT  = 0X04U,
-  RIGHT = 0X05U
+typedef enum {
+	NONE = 0x00U,
+	SELECT = 0x01U,
+	UP = 0x02U,
+	DOWN = 0x03U,
+	LEFT = 0X04U,
+	RIGHT = 0X05U
 } ADC_StatusTypeDef;
 /* USER CODE END PTD */
 
@@ -55,33 +56,35 @@ typedef enum
 
 /* USER CODE BEGIN PV */
 
-	//LCD variable
-	uint8_t row;
-	uint8_t rising_edge = 0;
-	uint8_t falling_edge = 0;
-	uint8_t mode = 0;
-	uint32_t start_tick = 0;
-	uint32_t cur_tick = 0;
-	uint32_t tick_gap = 0;
-	uint8_t pin_status[2] = {0};
+//LCD variable
 
+//i2c scan() 에 있던 변수
+HAL_StatusTypeDef res;
+uint8_t row;
+uint8_t rising_edge = 0;
+uint8_t falling_edge = 0;
+uint8_t mode = 0;
+uint32_t start_tick = 0;
+uint32_t cur_tick = 0;
+uint32_t tick_gap = 0;
+uint8_t pin_status[2] = { 0 };
 
-	//ADC variable
-	ADC_StatusTypeDef adc_status;
-	uint32_t adc_value;
+//ADC variable
+ADC_StatusTypeDef adc_status;
+uint32_t ADC_value;
 
-	//RTC variable
-	char Time[100];
-	char ampm[2][3] = {"AM", "PM"};
-    RTC_TimeTypeDef sTime;
-    RTC_DateTypeDef sDate;
+//RTC variable
+char Time[100];
+char ampm[2][3] = { "AM", "PM" };
+RTC_TimeTypeDef sTime;
+RTC_DateTypeDef sDate;
 
-    // I2C variable
-    HAL_StatusTypeDef res;
+// I2C variable
+HAL_StatusTypeDef res;
 
-    // UART variable
-    uint32_t buf[20], buf_index = 0;
-    uint32_t rx;
+// UART variable
+uint32_t buf[20], buf_index = 0;
+uint32_t rx;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -94,11 +97,19 @@ int __io_putchar(int ch) {
 }
 
 ADC_StatusTypeDef button_status(uint32_t value);
+void I2C_Scan();
+HAL_StatusTypeDef LCD_SendInternal(uint8_t lcd_addr, uint8_t data, uint8_t flags);
+void LCD_SendCommand(uint8_t lcd_addr, uint8_t cmd);
+void LCD_SendData(uint8_t lcd_addr, uint8_t data);
+void LCD_Init(uint8_t lcd_addr);
+void init();
+
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#include <string.h>
 
 #define LCD_ADDR (0x27 << 1)
 
@@ -107,93 +118,6 @@ ADC_StatusTypeDef button_status(uint32_t value);
 #define BACKLIGHT (1 << 3)
 
 #define LCD_DELAY_MS 5
-
-void I2C_Scan() {
-    char info[] = "Scanning I2C bus...\r\n";
-    HAL_UART_Transmit(&huart3, (uint8_t*)info, strlen(info), HAL_MAX_DELAY);
-
-    HAL_StatusTypeDef res;
-    for(uint16_t i = 0; i < 128; i++) {
-        res = HAL_I2C_IsDeviceReady(&hi2c1, i << 1, 1, 10);
-        if(res == HAL_OK) {
-            char msg[64];
-            snprintf(msg, sizeof(msg), "0x%02X", i);
-            HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-        } else {
-            HAL_UART_Transmit(&huart3, (uint8_t*)".", 1, HAL_MAX_DELAY);
-        }
-    }
-
-    HAL_UART_Transmit(&huart3, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
-}
-
-HAL_StatusTypeDef LCD_SendInternal(uint8_t lcd_addr, uint8_t data, uint8_t flags) {
-    HAL_StatusTypeDef res;
-    for(;;) {
-        res = HAL_I2C_IsDeviceReady(&hi2c1, lcd_addr, 1, HAL_MAX_DELAY);
-        if(res == HAL_OK)
-            break;
-    }
-
-    uint8_t up = data & 0xF0;
-    uint8_t lo = (data << 4) & 0xF0;
-
-    uint8_t data_arr[4];
-    data_arr[0] = up|flags|BACKLIGHT|PIN_EN;
-    data_arr[1] = up|flags|BACKLIGHT;
-    data_arr[2] = lo|flags|BACKLIGHT|PIN_EN;
-    data_arr[3] = lo|flags|BACKLIGHT;
-
-    res = HAL_I2C_Master_Transmit(&hi2c1, lcd_addr, data_arr, sizeof(data_arr), HAL_MAX_DELAY);
-//    // data_arr 출력해보기
-//    HAL_UART_Transmit(&huart3, data_arr, sizeof(data_arr), 100);
-    HAL_Delay(LCD_DELAY_MS);
-    return res;
-}
-
-void LCD_SendCommand(uint8_t lcd_addr, uint8_t cmd) {
-    LCD_SendInternal(lcd_addr, cmd, 0);
-}
-
-void LCD_SendData(uint8_t lcd_addr, uint8_t data) {
-    LCD_SendInternal(lcd_addr, data, PIN_RS);
-}
-
-void LCD_Init(uint8_t lcd_addr) {
-    // 4-bit mode, 2 lines, 5x7 format
-    LCD_SendCommand(lcd_addr, 0b00110000);
-    // display & cursor home (keep this!)
-    LCD_SendCommand(lcd_addr, 0b00000010);
-    // display on, right shift, underline off, blink off
-    LCD_SendCommand(lcd_addr, 0b00001100);
-    // clear display (optional here)
-    LCD_SendCommand(lcd_addr, 0b00000001);
-}
-
-void LCD_SendString(uint8_t lcd_addr, char *str) {
-    while(*str) {
-        LCD_SendData(lcd_addr, (uint8_t)(*str));
-        str++;
-    }
-}
-
-void init() {
-    I2C_Scan();
-    LCD_Init(LCD_ADDR);
-
-    // set address to 0x00
-    LCD_SendCommand(LCD_ADDR, 0b10000000);
-    LCD_SendString(LCD_ADDR, " Using 1602 LCD");
-
-    // set address to 0x40
-    LCD_SendCommand(LCD_ADDR, 0b11000000);
-    LCD_SendString(LCD_ADDR, "  over I2C bus");
-}
-
-void loop() {
-    HAL_Delay(100);
-}
-
 
 
 /* USER CODE END 0 */
@@ -230,10 +154,12 @@ int main(void)
   MX_I2C1_Init();
   MX_USART3_UART_Init();
   MX_ADC1_Init();
+  MX_TIM3_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
+	HAL_TIM_Base_Start_IT(&htim3);
 
 //  HAL_UART_Receive_IT(&huart3, &rx, 1);
   /* USER CODE END 2 */
@@ -243,130 +169,110 @@ int main(void)
 	init();
 	LCD_Init(LCD_ADDR);
 //	LCD_SendCommand(LCD_ADDR, 0b00000001);
-	while (1)
-  {
+
+	while (1) {
 		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
 		HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BCD);
-
 		HAL_ADC_Start(&hadc1);
-		HAL_ADC_PollForConversion(&hadc1, 10);
-		adc_value = HAL_ADC_GetValue(&hadc1);
-		HAL_ADC_Stop(&hadc1);
 
-		sprintf(Time," %s %02x : %02x : %02x", ampm[sTime.TimeFormat], sTime.Hours, sTime.Minutes, sTime.Seconds);
+		sprintf(Time, " %s %02x : %02x : %02x", ampm[sTime.TimeFormat],
+				sTime.Hours, sTime.Minutes, sTime.Seconds);
 
 		// LCD 윗줄
 		LCD_SendCommand(LCD_ADDR, 0b10000000);
-	    LCD_SendString(LCD_ADDR, " Park Jung Hwan");
+		LCD_SendString(LCD_ADDR, " Park Jung Hwan");
 
 		// LCD 아랫줄
-	    LCD_SendCommand(LCD_ADDR, 0b11000000);
-	    LCD_SendString(LCD_ADDR, Time);
-
-	    if (button_status(adc_value) == UP) {
-	    	// 커서 blink ON
-			LCD_SendCommand(LCD_ADDR, 0b00001111);
-			printf("UP\r\n");
-	    }
-	    if (button_status(adc_value) == DOWN) {
-			printf("DOWN\r\n");
-	    }
-	    if (button_status(adc_value) == LEFT) {
-	    	// 커서 왼쪽 이동
-			LCD_SendCommand(LCD_ADDR, 0b00010000);
-			printf("LEFT\r\n");
-	    }
-	    if (button_status(adc_value) == RIGHT) {
-	    	// 커서 오른쪽 이동
-			LCD_SendCommand(LCD_ADDR, 0b00010100);
-			printf("RIGHT\r\n");
-	    }
-
-	    if (button_status(adc_value) == SELECT) {
-	    	LCD_SendString(LCD_ADDR, Time);
-	    	printf("SELECT\r\n");
-	    }
-
-	    while(mode != 0) {
-
-	    	HAL_ADC_Start(&hadc1);
-			HAL_ADC_PollForConversion(&hadc1, 10);
-			adc_value = HAL_ADC_GetValue(&hadc1);
-			HAL_ADC_Stop(&hadc1);
-
-	    	if (button_status(adc_value) == UP) {
-		    	// 커서 blink
-				LCD_SendCommand(LCD_ADDR, 0b00001111);
-				printf("UP\r\n");
-		    }
-		    if (button_status(adc_value) == DOWN) {
-		    	mode++;
-				printf("DOWN : %d \r\n", mode);
-		    }
-		    if (button_status(adc_value) == LEFT) {
-		    	// 커서 왼쪽이동
-		    	LCD_SendCommand(LCD_ADDR, 0b00010000);
-				printf("LEFT\r\n");
-		    }
-		    if (button_status(adc_value) == RIGHT) {
-		    	// 커서 오른쪽이동
-				LCD_SendCommand(LCD_ADDR, 0b00010100);
-				printf("RIGHT\r\n");
-		    }
-
-		    if (button_status(adc_value) == SELECT) {
-		    	printf("SELECT\r\n");
-		        // display & cursor home (keep this!)
-		        LCD_SendCommand(LCD_ADDR, 0b00000010);
-		    }
-			HAL_Delay(1000);
-	    }
+		LCD_SendCommand(LCD_ADDR, 0b11000000);
+		LCD_SendString(LCD_ADDR, Time);
 
 
+		//Set Time loop
+		while (mode == 1) {
 
-	    //mode 를 정해주는 while loop
-	    while (rising_edge >= 1) {
-	    	cur_tick = HAL_GetTick();
-	    	tick_gap = cur_tick - start_tick;
+			if (rising_edge >= 1 && falling_edge >= 1) {
+				rising_edge = 0;
+				falling_edge = 0;
+				mode = 0;
+				printf("mode reset\r\n");
+			}
+//			if () {
+//
+//			}
+//			if () {
+//
+//			}
+//			if () {
+//
+//			}
+//			if () {
+//
+//			}
 
-	    	if (tick_gap >= 300) {
+		}
 
-	    		if (rising_edge == 1 && falling_edge >= 1) {
-		    		rising_edge = 0;
-		    		falling_edge = 0;
-	    			printf("one click==========================\r\n");
-	    		}
-	    		if (rising_edge >= 2 && falling_edge >= 1) {
-		    		rising_edge = 0;
-		    		falling_edge = 0;
-	    			printf("two click++++++++++++++++++++++++++\r\n");
-	    		}
-		    	if (tick_gap >= 2000 && falling_edge == 0) {
-		    		rising_edge = 0;
-		    		falling_edge = 0;
-	    			printf("long click//////////////////////////\r\n");
-		    	}
-	    	}
-	    	HAL_Delay(100);
-	    }
+		//AL loop
+		while (mode == 2) {
+
+			if (rising_edge >= 1 && falling_edge >= 1) {
+				rising_edge = 0;
+				falling_edge = 0;
+				mode = 0;
+				printf("mode reset\r\n");
+			}
+
+
+		}
+
+		//Song choice loop
+		while (mode == 3) {
+
+			if (rising_edge >= 1 && falling_edge >= 1) {
+				rising_edge = 0;
+				falling_edge = 0;
+				mode = 0;
+				printf("mode reset\r\n");
+			}
+
+
+		}
+
+		//mode 를 정해주는 while loop
+		while (rising_edge >= 1) {
+			cur_tick = HAL_GetTick();
+			tick_gap = cur_tick - start_tick;
+
+			if (tick_gap >= 300) {
+
+				if (rising_edge == 1 && falling_edge >= 1) {
+					rising_edge = 0;
+					falling_edge = 0;
+					mode = 1;
+					printf("one click==========================\r\n");
+				}
+				if (rising_edge >= 2 && falling_edge >= 1) {
+					rising_edge = 0;
+					falling_edge = 0;
+					mode = 2;
+					printf("two click++++++++++++++++++++++++++\r\n");
+				}
+				if (tick_gap >= 2000 && falling_edge == 0) {
+					rising_edge = 0;
+					falling_edge = 0;
+					mode = 3;
+					printf("long click//////////////////////////\r\n");
+				}
+			}
+		}
 
 		memset(buf, 0, sizeof(buf));
-		sprintf(buf, "%d\r\n", adc_value);
+		sprintf(buf, "%d\r\n", ADC_value);
 //		HAL_UART_Transmit_IT(&huart3, buf, sizeof(buf));
-
-//		if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 1) {
-//			printf("rising edge\r\n");
-//			mode_select = 1;
-//	    	start_tick = HAL_GetTick();
-//		}
-
-		HAL_Delay(100);
-
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+	}
   /* USER CODE END 3 */
 }
 
@@ -436,28 +342,119 @@ static void MX_NVIC_Init(void)
   /* EXTI15_10_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+  /* TIM3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM3_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
 ADC_StatusTypeDef button_status(uint32_t value) {
 
-	if (value < 100) return UP;
-	if (800 < value && value < 900) return DOWN;
-	if (1800 < value && value < 2000) return LEFT;
-	if (2800 < value && value < 3000) return RIGHT;
-	if (4000 < value && value < 5000) return SELECT;
+	if (value < 100)
+		return UP;
+	if (800 < value && value < 900)
+		return DOWN;
+	if (1800 < value && value < 2000)
+		return LEFT;
+	if (2800 < value && value < 3000)
+		return RIGHT;
+	if (4000 < value && value < 5000)
+		return SELECT;
 
 	return NONE;
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
+void I2C_Scan() {
+	char info[] = "Scanning I2C bus...\r\n";
+	HAL_UART_Transmit(&huart3, (uint8_t*) info, strlen(info), HAL_MAX_DELAY);
 
-	 // rising edge
+
+	for (uint16_t i = 0; i < 128; i++) {
+		res = HAL_I2C_IsDeviceReady(&hi2c1, i << 1, 1, 10);
+		if (res == HAL_OK) {
+			char msg[64];
+			snprintf(msg, sizeof(msg), "0x%02X", i);
+			HAL_UART_Transmit(&huart3, (uint8_t*) msg, strlen(msg),
+			HAL_MAX_DELAY);
+		} else {
+			HAL_UART_Transmit(&huart3, (uint8_t*) ".", 1, HAL_MAX_DELAY);
+		}
+	}
+
+	HAL_UART_Transmit(&huart3, (uint8_t*) "\r\n", 2, HAL_MAX_DELAY);
+}
+
+HAL_StatusTypeDef LCD_SendInternal(uint8_t lcd_addr, uint8_t data,
+		uint8_t flags) {
+	HAL_StatusTypeDef res;
+	for (;;) {
+		res = HAL_I2C_IsDeviceReady(&hi2c1, lcd_addr, 1, HAL_MAX_DELAY);
+		if (res == HAL_OK)
+			break;
+	}
+
+	uint8_t up = data & 0xF0;
+	uint8_t lo = (data << 4) & 0xF0;
+
+	uint8_t data_arr[4];
+	data_arr[0] = up | flags | BACKLIGHT | PIN_EN;
+	data_arr[1] = up | flags | BACKLIGHT;
+	data_arr[2] = lo | flags | BACKLIGHT | PIN_EN;
+	data_arr[3] = lo | flags | BACKLIGHT;
+
+	res = HAL_I2C_Master_Transmit(&hi2c1, lcd_addr, data_arr, sizeof(data_arr),
+	HAL_MAX_DELAY);
+	HAL_Delay(LCD_DELAY_MS);
+	return res;
+}
+
+void LCD_SendCommand(uint8_t lcd_addr, uint8_t cmd) {
+	LCD_SendInternal(lcd_addr, cmd, 0);
+}
+
+void LCD_SendData(uint8_t lcd_addr, uint8_t data) {
+	LCD_SendInternal(lcd_addr, data, PIN_RS);
+}
+
+void LCD_Init(uint8_t lcd_addr) {
+	// 4-bit mode, 2 lines, 5x7 format
+	LCD_SendCommand(lcd_addr, 0b00110000);
+	// display & cursor home (keep this!)
+	LCD_SendCommand(lcd_addr, 0b00000010);
+	// display on, right shift, underline off, blink off
+	LCD_SendCommand(lcd_addr, 0b00001100);
+	// clear display (optional here)
+	LCD_SendCommand(lcd_addr, 0b00000001);
+}
+
+void LCD_SendString(uint8_t lcd_addr, char *str) {
+	while (*str) {
+		LCD_SendData(lcd_addr, (uint8_t) (*str));
+		str++;
+	}
+}
+
+void init() {
+	I2C_Scan();
+	LCD_Init(LCD_ADDR);
+
+	// set address to 0x00
+	LCD_SendCommand(LCD_ADDR, 0b10000000);
+	LCD_SendString(LCD_ADDR, " Using 1602 LCD");
+
+	// set address to 0x40
+	LCD_SendCommand(LCD_ADDR, 0b11000000);
+	LCD_SendString(LCD_ADDR, "  over I2C bus");
+}
+
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+
+	// rising edge
 	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 1) {
 		rising_edge++;
 		printf("rising edge : %d\r\n", rising_edge);
-    	start_tick = HAL_GetTick();
+		start_tick = HAL_GetTick();
 	}
 
 	// falling edge
@@ -467,6 +464,30 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	}
 
 }
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+
+	if (htim->Instance == TIM3) {
+
+//		HAL_ADC_PollForConversion(&hadc1, 10);
+		ADC_value = HAL_ADC_GetValue(&hadc1);
+		HAL_ADC_Stop(&hadc1);
+
+		if (button_status(ADC_value) == UP) {
+			printf("UP\r\n");
+		}
+		if (button_status(ADC_value) == DOWN) {
+			printf("DOWN\r\n");
+		}
+		if (button_status(ADC_value) == LEFT) {
+			printf("LEFT\r\n");
+		}
+		if (button_status(ADC_value) == RIGHT) {
+			printf("RIGHT\r\n");
+		}
+	}
+}
+
 /* USER CODE END 4 */
 
 /**
@@ -476,11 +497,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1) {
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 
