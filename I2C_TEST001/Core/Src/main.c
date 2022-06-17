@@ -213,9 +213,9 @@ int main(void)
 						LCD_SendCommand(LCD_ADDR, 0b11000000);
 						LCD_SendString(LCD_ADDR, Time_temp);
 						LCD_SendCommand(LCD_ADDR, 0b00001111);
-//						for (int i = 0; i < 11; i++) {
-//							LCD_SendCommand(LCD_ADDR, 0b00010000);
-//						}
+						for (int i = 0; i < 11; i++) {
+							LCD_SendCommand(LCD_ADDR, 0b00010000);
+						}
 						printf("one click==========================\r\n");
 					}
 					if (rising_edge >= 2 && falling_edge >= 1) {
@@ -245,8 +245,32 @@ int main(void)
 				printf("mode reset\r\n");
 			}
 
-			if (get_time > 6) {
+			if (get_time > 8) {
 				if (up > 0) {
+					if (cursor == 0) {
+
+					}
+
+					else if (cursor == 3) {
+
+					}
+					else if (cursor == 4) {
+
+					}
+
+					else if (cursor == 6) {
+
+					}
+					else if (cursor == 7) {
+
+					}
+
+					else if (cursor == 9) {
+
+					}
+					else if (cursor == 10) {
+
+					}
 
 					up = 0;
 				}
@@ -255,14 +279,51 @@ int main(void)
 					down = 0;
 				}
 				if (left > 0) {
-					cursor--;
-					LCD_SendCommand(LCD_ADDR, 0b00010000);
+					if (cursor > 0) {
+						cursor--;
+						LCD_SendCommand(LCD_ADDR, 0b00010000);
 
+						if (cursor == 8) {
+							cursor--;
+							LCD_SendCommand(LCD_ADDR, 0b00010000);
+						}
+
+						if (cursor == 5) {
+							cursor--;
+							LCD_SendCommand(LCD_ADDR, 0b00010000);
+						}
+
+						if (cursor == 2) {
+							cursor -= 2;
+							LCD_SendCommand(LCD_ADDR, 0b00010000);
+							LCD_SendCommand(LCD_ADDR, 0b00010000);
+						}
+					}
 					left = 0;
 				}
 				if (right > 0) {
-					cursor++;
-					LCD_SendCommand(LCD_ADDR, 0b00010100);
+
+					if (cursor < 10) {
+						cursor++;
+						LCD_SendCommand(LCD_ADDR, 0b00010100);
+
+						if (cursor == 8) {
+							cursor++;
+							LCD_SendCommand(LCD_ADDR, 0b00010100);
+						}
+
+						if (cursor == 5) {
+							cursor++;
+							LCD_SendCommand(LCD_ADDR, 0b00010100);
+						}
+
+						if (cursor == 1) {
+							cursor += 2;
+							LCD_SendCommand(LCD_ADDR, 0b00010100);
+							LCD_SendCommand(LCD_ADDR, 0b00010100);
+						}
+
+					}
 					right = 0;
 				}
 				get_time = 0;
