@@ -90,6 +90,7 @@ char Time[20];
 char ampm[2][3] = { "AM", "PM" };
 RTC_TimeTypeDef sTime;
 RTC_DateTypeDef sDate;
+
 // RTC_mode variable
 char Time_temp[20];
 RTC_TimeTypeDef sTime_temp;
@@ -114,7 +115,7 @@ int __io_putchar(int ch) {
 
 void SystemClock_Config(void);
 ADC_StatusTypeDef button_status(uint32_t value);
-void screen(int cursor);
+void screen(int cursor, RTC_TimeTypeDef sTime_screen);
 
 void I2C_Scan();
 HAL_StatusTypeDef LCD_SendInternal(uint8_t lcd_addr, uint8_t data,
@@ -140,56 +141,54 @@ void init();
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
-  /* USER CODE BEGIN 1 */
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_RTC_Init();
-  MX_I2C1_Init();
-  MX_USART3_UART_Init();
-  MX_ADC1_Init();
-  MX_TIM3_Init();
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_RTC_Init();
+	MX_I2C1_Init();
+	MX_USART3_UART_Init();
+	MX_ADC1_Init();
+	MX_TIM3_Init();
 
-  /* Initialize interrupts */
-  MX_NVIC_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize interrupts */
+	MX_NVIC_Init();
+	/* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim3);
 
 //  HAL_UART_Receive_IT(&huart3, &rx, 1);
-  /* USER CODE END 2 */
+	/* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 	init();
 	LCD_Init(LCD_ADDR);
 	up = 0;
 	down = 0;
 	left = 0;
 	right = 0;
-
 
 	//	LCD_SendCommand(LCD_ADDR, 0b00000001);
 
@@ -233,12 +232,13 @@ int main(void)
 						sTime_temp.Seconds = 0;
 						sTime_temp.TimeFormat = 0;
 						cursor = 0;
+
 						// LCD up
 						LCD_Init(LCD_ADDR);
 						LCD_SendCommand(LCD_ADDR, 0b10000000);
 						LCD_SendString(LCD_ADDR, "Set Time Mode");
-						screen(cursor);
-
+						// LCD down
+						screen(cursor, sTime_temp);
 
 						LCD_SendCommand(LCD_ADDR, 0b00001111);
 
@@ -250,12 +250,28 @@ int main(void)
 					}
 
 					if (rising_edge >= 2 && falling_edge >= 1) {
+						// init the temp
+						sTime_AL.Hours = 0;
+						sTime_AL.Minutes = 0;
+						sTime_AL.Seconds = 0;
+						sTime_AL.TimeFormat = 0;
+						cursor = 0;
+
+						// LCD up
+						LCD_Init(LCD_ADDR);
+						//blink on
+						LCD_SendCommand(LCD_ADDR, 0b00001111);
+
+						LCD_SendCommand(LCD_ADDR, 0b10000000);
+						LCD_SendString(LCD_ADDR, "Alarm Mode");
+						// LCD down
+						screen(cursor, sTime_AL);
+
+						//init the user button
 						rising_edge = 0;
 						falling_edge = 0;
 						mode = 2;
-						LCD_Init(LCD_ADDR);
-						LCD_SendCommand(LCD_ADDR, 0b10000000);
-						LCD_SendString(LCD_ADDR, "Alarm Mode");
+
 						printf("two click++++++++++++++++++++++++++\r\n");
 					}
 
@@ -335,15 +351,14 @@ int main(void)
 							if (sTime_temp.Hours == 0) {
 								sTime_temp.Hours = 12;
 							}
-							screen(cursor);
+							screen(cursor, sTime_temp);
 
-						}
-						else if (sTime_temp.TimeFormat == 1) {
+						} else if (sTime_temp.TimeFormat == 1) {
 							sTime_temp.TimeFormat = 0;
 							if (sTime_temp.Hours == 12) {
 								sTime_temp.Hours = 0;
 							}
-							screen(cursor);
+							screen(cursor, sTime_temp);
 						}
 					}
 
@@ -353,7 +368,7 @@ int main(void)
 						if (sTime_temp.Hours < 3) {
 							sTime_temp.Hours += 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 
 					// 1H switching
@@ -362,49 +377,55 @@ int main(void)
 						//AM
 						if (sTime_temp.TimeFormat == 0) {
 							// 0 ~ 11
-							if (0 <= sTime_temp.Hours && sTime_temp.Hours < 11) {
-								sTime_temp.Hours ++;
+							if (0 <= sTime_temp.Hours
+									&& sTime_temp.Hours < 11) {
+								sTime_temp.Hours++;
 							}
 						}
 						//PM
 						else if (sTime_temp.TimeFormat == 1) {
 
 							// 1 ~ 12
-							if (1 <= sTime_temp.Hours && sTime_temp.Hours < 12) {
-								sTime_temp.Hours ++;
+							if (1 <= sTime_temp.Hours
+									&& sTime_temp.Hours < 12) {
+								sTime_temp.Hours++;
 							}
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 
 					// 10M switching
 					else if (cursor == 6) {
-						if (0 <= sTime_temp.Minutes && sTime_temp.Minutes < 50) {
+						if (0 <= sTime_temp.Minutes
+								&& sTime_temp.Minutes < 50) {
 							sTime_temp.Minutes += 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 					// 1M switching
 					else if (cursor == 7) {
-						if (0 <= sTime_temp.Minutes && sTime_temp.Minutes < 59) {
+						if (0 <= sTime_temp.Minutes
+								&& sTime_temp.Minutes < 59) {
 							sTime_temp.Minutes += 1;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 
 					// 10S switching
 					else if (cursor == 9) {
-						if (0 <= sTime_temp.Seconds && sTime_temp.Seconds < 50) {
+						if (0 <= sTime_temp.Seconds
+								&& sTime_temp.Seconds < 50) {
 							sTime_temp.Seconds += 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 					// 1S switching
 					else if (cursor == 10) {
-						if (0 <= sTime_temp.Seconds && sTime_temp.Seconds < 59) {
+						if (0 <= sTime_temp.Seconds
+								&& sTime_temp.Seconds < 59) {
 							sTime_temp.Seconds += 1;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 
 					// clear the up flag
@@ -419,53 +440,56 @@ int main(void)
 							if (sTime_temp.Hours == 0) {
 								sTime_temp.Hours = 12;
 							}
-							screen(cursor);
-						}
-						else if (sTime_temp.TimeFormat == 1) {
+							screen(cursor, sTime_temp);
+						} else if (sTime_temp.TimeFormat == 1) {
 							sTime_temp.TimeFormat = 0;
 							if (sTime_temp.Hours == 12) {
 								sTime_temp.Hours = 0;
 							}
-							screen(cursor);
+							screen(cursor, sTime_temp);
 						}
 					}
 
 					// 1H switching
 					else if (cursor == 4) {
 						if (sTime_temp.Hours > 0) {
-							sTime_temp.Hours --;
+							sTime_temp.Hours--;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 
 					// 10M switching
 					else if (cursor == 6) {
-						if (0 < sTime_temp.Minutes && sTime_temp.Minutes <= 50) {
+						if (0 < sTime_temp.Minutes
+								&& sTime_temp.Minutes <= 50) {
 							sTime_temp.Minutes -= 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 					// 1M switching
 					else if (cursor == 7) {
-						if (0 < sTime_temp.Minutes && sTime_temp.Minutes <= 59) {
+						if (0 < sTime_temp.Minutes
+								&& sTime_temp.Minutes <= 59) {
 							sTime_temp.Minutes -= 1;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 
 					// 10S switching
 					else if (cursor == 9) {
-						if (0 < sTime_temp.Seconds && sTime_temp.Seconds <= 50) {
+						if (0 < sTime_temp.Seconds
+								&& sTime_temp.Seconds <= 50) {
 							sTime_temp.Seconds -= 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 					// 1S switching
 					else if (cursor == 10) {
-						if (0 < sTime_temp.Seconds && sTime_temp.Seconds <= 59) {
+						if (0 < sTime_temp.Seconds
+								&& sTime_temp.Seconds <= 59) {
 							sTime_temp.Seconds -= 1;
 						}
-						screen(cursor);
+						screen(cursor, sTime_temp);
 					}
 
 					// clear the down flag
@@ -534,12 +558,57 @@ int main(void)
 		//==========================================================================================================
 		//AL loop
 		while (mode == 2) {
+			// start adc for read adc_value
 			HAL_ADC_Start(&hadc1);
-			if (rising_edge >= 1 && falling_edge >= 1) {
-				rising_edge = 0;
-				falling_edge = 0;
-				mode = 0;
-				printf("mode reset\r\n");
+
+			// IF USER CLICK THE USER BUTTON
+			// USER CAN CHOOSE EXIT OR APPLY
+			if (rising_edge >= 1) {
+
+				// this flag is check the exit or apply
+				apply_flag = 1;
+
+				// EXIT without apply
+				if (falling_edge > 0) {
+					// ===========================================init func
+
+					// init the user button
+					apply_flag = 0;
+					rising_edge = 0;
+					falling_edge = 0;
+
+					// turn off the blink
+					LCD_SendCommand(LCD_ADDR, 0b00001110);
+					mode = 0;
+					printf("MODE exit\r\n");
+
+					// ===========================================init func
+				}
+				// APPLY and exit
+				if (falling_edge == 0 && get_time_apply > 4) {
+
+					// sTime is now applied by user
+					sTime.Hours = sTime_AL.Hours;
+					sTime.Minutes = sTime_AL.Minutes;
+					sTime.Seconds = sTime_AL.Seconds;
+					sTime.TimeFormat = sTime_AL.TimeFormat;
+					HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+
+					// ===========================================init func
+					// turn off the blink
+					LCD_SendCommand(LCD_ADDR, 0b00001110);
+
+					// init the user button
+					apply_flag = 0;
+					get_time_apply = 0;
+					rising_edge = 0;
+					falling_edge = 0;
+
+					mode = 0;
+					printf("MODE APPLY\r\n");
+
+					// ===========================================init func
+				}
 			}
 
 			if (get_time > 0) {
@@ -547,81 +616,80 @@ int main(void)
 				if (up > 0) {
 					//AM or PM switching
 					if (cursor == 0) {
-						if (sTime_temp.TimeFormat == 0) {
-							sTime_temp.TimeFormat = 1;
-							if (sTime_temp.Hours == 0) {
-								sTime_temp.Hours = 12;
+						if (sTime_AL.TimeFormat == 0) {
+							sTime_AL.TimeFormat = 1;
+							if (sTime_AL.Hours == 0) {
+								sTime_AL.Hours = 12;
 							}
-							screen(cursor);
+							screen(cursor, sTime_AL);
 
-						}
-						else if (sTime_temp.TimeFormat == 1) {
-							sTime_temp.TimeFormat = 0;
-							if (sTime_temp.Hours == 12) {
-								sTime_temp.Hours = 0;
+						} else if (sTime_AL.TimeFormat == 1) {
+							sTime_AL.TimeFormat = 0;
+							if (sTime_AL.Hours == 12) {
+								sTime_AL.Hours = 0;
 							}
-							screen(cursor);
+							screen(cursor, sTime_AL);
 						}
 					}
 
 					// 10H switching
 					else if (cursor == 3) {
 
-						if (sTime_temp.Hours < 3) {
-							sTime_temp.Hours += 10;
+						if (sTime_AL.Hours < 3) {
+							sTime_AL.Hours += 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 
 					// 1H switching
 					else if (cursor == 4) {
 
 						//AM
-						if (sTime_temp.TimeFormat == 0) {
+						if (sTime_AL.TimeFormat == 0) {
 							// 0 ~ 11
-							if (0 <= sTime_temp.Hours && sTime_temp.Hours < 11) {
-								sTime_temp.Hours ++;
+							if (0 <= sTime_AL.Hours && sTime_AL.Hours < 11) {
+								sTime_AL.Hours++;
 							}
 						}
 						//PM
-						else if (sTime_temp.TimeFormat == 1) {
+						else if (sTime_AL.TimeFormat == 1) {
 
 							// 1 ~ 12
-							if (1 <= sTime_temp.Hours && sTime_temp.Hours < 12) {
-								sTime_temp.Hours ++;
+							if (1 <= sTime_AL.Hours && sTime_AL.Hours < 12) {
+								sTime_AL.Hours++;
 							}
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 
 					// 10M switching
 					else if (cursor == 6) {
-						if (0 <= sTime_temp.Minutes && sTime_temp.Minutes < 50) {
-							sTime_temp.Minutes += 10;
+						if (0 <= sTime_AL.Minutes && sTime_AL.Minutes < 50) {
+							sTime_AL.Minutes += 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 					// 1M switching
 					else if (cursor == 7) {
-						if (0 <= sTime_temp.Minutes && sTime_temp.Minutes < 59) {
-							sTime_temp.Minutes += 1;
+						if (0 <= sTime_AL.Minutes && sTime_AL.Minutes < 59) {
+							sTime_AL.Minutes += 1;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 
 					// 10S switching
 					else if (cursor == 9) {
-						if (0 <= sTime_temp.Seconds && sTime_temp.Seconds < 50) {
-							sTime_temp.Seconds += 10;
+						if (0 <= sTime_AL.Seconds && sTime_AL.Seconds < 50) {
+							sTime_AL.Seconds += 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 					// 1S switching
 					else if (cursor == 10) {
-						if (0 <= sTime_temp.Seconds && sTime_temp.Seconds < 59) {
-							sTime_temp.Seconds += 1;
+						if (0 <= sTime_AL.Seconds && sTime_AL.Seconds < 59) {
+							sTime_AL.Seconds += 1;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 
 					// clear the up flag
@@ -631,58 +699,57 @@ int main(void)
 
 					//AM or PM switching
 					if (cursor == 0) {
-						if (sTime_temp.TimeFormat == 0) {
-							sTime_temp.TimeFormat = 1;
-							if (sTime_temp.Hours == 0) {
-								sTime_temp.Hours = 12;
+						if (sTime_AL.TimeFormat == 0) {
+							sTime_AL.TimeFormat = 1;
+							if (sTime_AL.Hours == 0) {
+								sTime_AL.Hours = 12;
 							}
-							screen(cursor);
-						}
-						else if (sTime_temp.TimeFormat == 1) {
-							sTime_temp.TimeFormat = 0;
-							if (sTime_temp.Hours == 12) {
-								sTime_temp.Hours = 0;
+							screen(cursor, sTime_AL);
+						} else if (sTime_AL.TimeFormat == 1) {
+							sTime_AL.TimeFormat = 0;
+							if (sTime_AL.Hours == 12) {
+								sTime_AL.Hours = 0;
 							}
-							screen(cursor);
+							screen(cursor, sTime_AL);
 						}
 					}
 
 					// 1H switching
 					else if (cursor == 4) {
-						if (sTime_temp.Hours > 0) {
-							sTime_temp.Hours --;
+						if (sTime_AL.Hours > 0) {
+							sTime_AL.Hours--;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 
 					// 10M switching
 					else if (cursor == 6) {
-						if (0 < sTime_temp.Minutes && sTime_temp.Minutes <= 50) {
-							sTime_temp.Minutes -= 10;
+						if (0 < sTime_AL.Minutes && sTime_AL.Minutes <= 50) {
+							sTime_AL.Minutes -= 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 					// 1M switching
 					else if (cursor == 7) {
-						if (0 < sTime_temp.Minutes && sTime_temp.Minutes <= 59) {
-							sTime_temp.Minutes -= 1;
+						if (0 < sTime_AL.Minutes && sTime_AL.Minutes <= 59) {
+							sTime_AL.Minutes -= 1;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 
 					// 10S switching
 					else if (cursor == 9) {
-						if (0 < sTime_temp.Seconds && sTime_temp.Seconds <= 50) {
-							sTime_temp.Seconds -= 10;
+						if (0 < sTime_AL.Seconds && sTime_AL.Seconds <= 50) {
+							sTime_AL.Seconds -= 10;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 					// 1S switching
 					else if (cursor == 10) {
-						if (0 < sTime_temp.Seconds && sTime_temp.Seconds <= 59) {
-							sTime_temp.Seconds -= 1;
+						if (0 < sTime_AL.Seconds && sTime_AL.Seconds <= 59) {
+							sTime_AL.Seconds -= 1;
 						}
-						screen(cursor);
+						screen(cursor, sTime_AL);
 					}
 
 					// clear the down flag
@@ -744,6 +811,7 @@ int main(void)
 
 				// clear the get_time flag (to measure the time)
 				get_time = 0;
+
 			}
 		}
 		//==========================================================================================================
@@ -765,82 +833,78 @@ int main(void)
 		sprintf(buf, "%d\r\n", ADC_value);
 //		HAL_UART_Transmit_IT(&huart3, buf, sizeof(buf));
 
-    /* USER CODE END WHILE */
+		/* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
 
-  /** Configure the main internal regulator output voltage
-  */
-  __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+	/** Configure the main internal regulator output voltage
+	 */
+	__HAL_RCC_PWR_CLK_ENABLE();
+	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSE;
-  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 180;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI
+			| RCC_OSCILLATORTYPE_LSE;
+	RCC_OscInitStruct.LSEState = RCC_LSE_ON;
+	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+	RCC_OscInitStruct.PLL.PLLM = 8;
+	RCC_OscInitStruct.PLL.PLLN = 180;
+	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+	RCC_OscInitStruct.PLL.PLLQ = 4;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		Error_Handler();
+	}
 
-  /** Activate the Over-Drive mode
-  */
-  if (HAL_PWREx_EnableOverDrive() != HAL_OK)
-  {
-    Error_Handler();
-  }
+	/** Activate the Over-Drive mode
+	 */
+	if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
+		Error_Handler();
+	}
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+		Error_Handler();
+	}
 }
 
 /**
-  * @brief NVIC Configuration.
-  * @retval None
-  */
-static void MX_NVIC_Init(void)
-{
-  /* USART3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(USART3_IRQn);
-  /* EXTI15_10_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-  /* TIM3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM3_IRQn);
+ * @brief NVIC Configuration.
+ * @retval None
+ */
+static void MX_NVIC_Init(void) {
+	/* USART3_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(USART3_IRQn);
+	/* EXTI15_10_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+	/* TIM3_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(TIM3_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
@@ -860,9 +924,9 @@ ADC_StatusTypeDef button_status(uint32_t value) {
 	return NONE;
 }
 
-void screen(int cursor) {
-	sprintf(Time_temp, "%s %02d:%02d:%02d", ampm[sTime_temp.TimeFormat],
-			sTime_temp.Hours, sTime_temp.Minutes, sTime_temp.Seconds);
+void screen(int cursor, RTC_TimeTypeDef sTime_screen) {
+	sprintf(Time_temp, "%s %02d:%02d:%02d", ampm[sTime_screen.TimeFormat],
+			sTime_screen.Hours, sTime_screen.Minutes, sTime_screen.Seconds);
 	LCD_SendCommand(LCD_ADDR, 0b11000000);
 	LCD_SendString(LCD_ADDR, Time_temp);
 	for (int i = 0; i < 11 - cursor; i++) {
@@ -1012,17 +1076,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
+	/* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	__disable_irq();
 	while (1) {
 	}
-  /* USER CODE END Error_Handler_Debug */
+	/* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
