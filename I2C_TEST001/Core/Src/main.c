@@ -58,8 +58,14 @@ typedef enum {
 
 //TIM variable
 uint32_t get_time = 0;
-uint32_t get_time_apply = 0;
 uint32_t apply_flag = 0;
+uint32_t get_time_apply = 0;
+uint32_t exit_flag = 0;
+uint32_t get_time_exit = 0;
+
+
+
+
 
 //LCD variable
 
@@ -102,7 +108,6 @@ uint32_t rx;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 int __io_putchar(int ch) {
@@ -110,6 +115,7 @@ int __io_putchar(int ch) {
 	return ch;
 }
 
+void SystemClock_Config(void);
 ADC_StatusTypeDef button_status(uint32_t value);
 void I2C_Scan();
 HAL_StatusTypeDef LCD_SendInternal(uint8_t lcd_addr, uint8_t data,
@@ -135,59 +141,62 @@ void init();
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
-int main(void) {
-	/* USER CODE BEGIN 1 */
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_RTC_Init();
-	MX_I2C1_Init();
-	MX_USART3_UART_Init();
-	MX_ADC1_Init();
-	MX_TIM3_Init();
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_RTC_Init();
+  MX_I2C1_Init();
+  MX_USART3_UART_Init();
+  MX_ADC1_Init();
+  MX_TIM3_Init();
 
-	/* Initialize interrupts */
-	MX_NVIC_Init();
-	/* USER CODE BEGIN 2 */
+  /* Initialize interrupts */
+  MX_NVIC_Init();
+  /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim3);
 
 //  HAL_UART_Receive_IT(&huart3, &rx, 1);
-	/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	init();
 	LCD_Init(LCD_ADDR);
 //	LCD_SendCommand(LCD_ADDR, 0b00000001);
 
-	//init the time_temp
-	sTime_temp.Hours = 0;
-	sTime_temp.Minutes = 0;
-	sTime_temp.Seconds = 0;
-	sTime_temp.TimeFormat = 0;
 
 	while (1) {
+		//init the time_temp
+		sTime_temp.Hours = 0;
+		sTime_temp.Minutes = 0;
+		sTime_temp.Seconds = 0;
+		sTime_temp.TimeFormat = 1;
+
+
 		//Main loop
 		while (mode == 0) {
 			HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
@@ -214,19 +223,32 @@ int main(void) {
 				if (tick_gap >= 300) {
 
 					if (rising_edge == 1 && falling_edge >= 1) {
+
+						//init the user button
 						rising_edge = 0;
 						falling_edge = 0;
+
+						// init the temp
+						sTime_temp.Hours = 0;
+						sTime_temp.Minutes = 0;
+						sTime_temp.Seconds = 0;
+						sTime_temp.TimeFormat = 0;
 						mode = 1;
+
+						//screen func=====================================================
 						sprintf(Time_temp, "%s %02x:%02x:%02x",
-								ampm[sTime_temp.TimeFormat], sTime_temp.Hours,
-								sTime_temp.Minutes, sTime_temp.Seconds);
+								ampm[sTime_temp.TimeFormat],
+								sTime_temp.Hours, sTime_temp.Minutes,
+								sTime_temp.Seconds);
 						LCD_SendCommand(LCD_ADDR, 0b11000000);
 						LCD_SendString(LCD_ADDR, Time_temp);
 						for (int i = 0; i < 11; i++) {
 							LCD_SendCommand(LCD_ADDR, 0b00010000);
 						}
-						LCD_SendCommand(LCD_ADDR, 0b00001111);
+						//screen func=====================================================
 
+						LCD_SendCommand(LCD_ADDR, 0b00001111);
+						printf("sTime_temp.TimeFormat : %d\r\n", sTime_temp.TimeFormat);
 						printf("one click==========================\r\n");
 					}
 
@@ -252,46 +274,20 @@ int main(void) {
 
 			// start adc for read adc_value
 			HAL_ADC_Start(&hadc1);
-			// falling 엣지 값이 섞여 들어가지 않도록 초기화 한다.
-			falling_edge = 0;
+
+
 
 			// IF USER CLICK THE USER BUTTON
 			// USER CAN CHOOSE EXIT OR APPLY
 			if (rising_edge >= 1) {
+
+				// this flag is check the exit or apply
 				apply_flag = 1;
 
-				// APPLY and exit
-				if (falling_edge == 0 && get_time_apply > 19) {
+				// this flag is give some rest time
+				// because user button can be pushed by user too short
+				exit_flag = 1;
 
-					// sTime is now applied by user
-					sTime.Hours = sTime_temp.Hours;
-					sTime.Minutes = sTime_temp.Minutes;
-					sTime.Seconds = sTime_temp.Seconds;
-					sTime.TimeFormat = sTime_temp.TimeFormat;
-
-					// ===========================================init func
-
-					// init the user button
-					apply_flag = 0;
-					get_time_apply = 0;
-					rising_edge = 0;
-					falling_edge = 0;
-
-					// turn off the blink
-					LCD_SendCommand(LCD_ADDR, 0b00001110);
-
-					// init the temp
-					sTime_temp.Hours = 0;
-					sTime_temp.Minutes = 0;
-					sTime_temp.Seconds = 0;
-					sTime_temp.TimeFormat = 0;
-
-					//break the while
-					mode = 0;
-					printf("MODE APPLY\r\n");
-					// ===========================================init func
-
-				}
 
 				// EXIT without apply
 				if (falling_edge > 0) {
@@ -304,26 +300,64 @@ int main(void) {
 
 					// turn off the blink
 					LCD_SendCommand(LCD_ADDR, 0b00001110);
-
-					// init the temp
-					sTime_temp.Hours = 0;
-					sTime_temp.Minutes = 0;
-					sTime_temp.Seconds = 0;
-					sTime_temp.TimeFormat = 0;
-
-					//break the while
 					mode = 0;
-					printf("MODE APPLY\r\n");
+					printf("MODE exit\r\n");
+
+//					//break the while
+//					if (get_time_exit > 0) {
+//						//break the while
+//						exit_flag = 0;
+//						get_time_exit = 0;
+//						printf("exit_flag : %d\r\n", exit_flag);
+//						printf("get_time_exit : %d\r\n", get_time_exit);
+//					}
 					// ===========================================init func
 				}
+				// APPLY and exit
+				if (falling_edge == 0 && get_time_apply > 4) {
+
+					// sTime is now applied by user
+					sTime.Hours = sTime_temp.Hours;
+					sTime.Minutes = sTime_temp.Minutes;
+					sTime.Seconds = sTime_temp.Seconds;
+					sTime.TimeFormat = sTime_temp.TimeFormat;
+					HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
+
+					// ===========================================init func
+					// turn off the blink
+					LCD_SendCommand(LCD_ADDR, 0b00001110);
+
+					// init the user button
+					apply_flag = 0;
+					get_time_apply = 0;
+					rising_edge = 0;
+					falling_edge = 0;
+
+					mode = 0;
+					printf("MODE APPLY\r\n");
+
+//					//break the while
+//					if (get_time_exit > 0) {
+//						//break the while
+//						printf("exit_flag : %d\r\n", exit_flag);
+//						printf("get_time_exit : %d\r\n", get_time_exit);
+//						exit_flag = 0;
+//						get_time_exit = 0;
+//					}
+					// ===========================================init func
+
+				}
+
 			}
 
-			if (get_time > 10) {
+			if (get_time > 0) {
 				if (up > 0) {
 					//AM or PM switching
 					if (cursor == 0) {
 						if (sTime_temp.TimeFormat == 0) {
 							sTime_temp.TimeFormat = 1;
+
+							//screen func=====================================================
 							sprintf(Time_temp, "%s %02x:%02x:%02x",
 									ampm[sTime_temp.TimeFormat],
 									sTime_temp.Hours, sTime_temp.Minutes,
@@ -333,9 +367,11 @@ int main(void) {
 							for (int i = 0; i < 11; i++) {
 								LCD_SendCommand(LCD_ADDR, 0b00010000);
 							}
+							//screen func=====================================================
 
 						} else {
 							sTime_temp.TimeFormat = 0;
+							//screen func=====================================================
 							sprintf(Time_temp, "%s %02x:%02x:%02x",
 									ampm[sTime_temp.TimeFormat],
 									sTime_temp.Hours, sTime_temp.Minutes,
@@ -345,24 +381,29 @@ int main(void) {
 							for (int i = 0; i < 11; i++) {
 								LCD_SendCommand(LCD_ADDR, 0b00010000);
 							}
-
+							//screen func=====================================================
 						}
 					}
 
 					// 10H switching
 					else if (cursor == 3) {
 						if (sTime_temp.Hours < 10) {
-//							sTime_temp.Hours += 10;
-//							sprintf(Time_temp, "%s %02x:%02x:%02x",
-//									ampm[sTime_temp.TimeFormat],
-//									sTime_temp.Hours, sTime_temp.Minutes,
-//									sTime_temp.Seconds);
-//							LCD_SendCommand(LCD_ADDR, 0b11000000);
-//							LCD_SendString(LCD_ADDR, Time_temp);
-//							for (int i = 0; i < 8; i++) {
-//								LCD_SendCommand(LCD_ADDR, 0b00010000);
-//							}
-//							printf("sTime_temp.Hours : %d\r\n", sTime_temp.Hours);
+
+							// because of BCD shift << 4
+							sTime_temp.Hours += 1 << 4;
+							//screen func============================(int cursor)====================
+							sprintf(Time_temp, "%s %02x:%02x:%02x",
+									ampm[sTime_temp.TimeFormat],
+									sTime_temp.Hours, sTime_temp.Minutes,
+									sTime_temp.Seconds);
+							LCD_SendCommand(LCD_ADDR, 0b11000000);
+							LCD_SendString(LCD_ADDR, Time_temp);
+							for (int i = 0; i < 8; i++) {
+								LCD_SendCommand(LCD_ADDR, 0b00010000);
+							}
+							//screen func=====================================================
+							printf("sTime_temp.Hours : %d\r\n",
+									sTime_temp.Hours);
 						}
 
 					}
@@ -516,78 +557,82 @@ int main(void) {
 		sprintf(buf, "%d\r\n", ADC_value);
 //		HAL_UART_Transmit_IT(&huart3, buf, sizeof(buf));
 
-		/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
-void SystemClock_Config(void) {
-	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
-	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-	/** Configure the main internal regulator output voltage
-	 */
-	__HAL_RCC_PWR_CLK_ENABLE();
-	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-	/** Initializes the RCC Oscillators according to the specified parameters
-	 * in the RCC_OscInitTypeDef structure.
-	 */
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI
-			| RCC_OSCILLATORTYPE_LSE;
-	RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-	RCC_OscInitStruct.PLL.PLLM = 8;
-	RCC_OscInitStruct.PLL.PLLN = 180;
-	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-	RCC_OscInitStruct.PLL.PLLQ = 4;
-	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-		Error_Handler();
-	}
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSE;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 180;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-	/** Activate the Over-Drive mode
-	 */
-	if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
-		Error_Handler();
-	}
+  /** Activate the Over-Drive mode
+  */
+  if (HAL_PWREx_EnableOverDrive() != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-	/** Initializes the CPU, AHB and APB buses clocks
-	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
-		Error_Handler();
-	}
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /**
- * @brief NVIC Configuration.
- * @retval None
- */
-static void MX_NVIC_Init(void) {
-	/* USART3_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(USART3_IRQn);
-	/* EXTI15_10_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-	/* TIM3_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(TIM3_IRQn);
+  * @brief NVIC Configuration.
+  * @retval None
+  */
+static void MX_NVIC_Init(void)
+{
+  /* USART3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(USART3_IRQn);
+  /* EXTI15_10_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+  /* TIM3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM3_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
@@ -701,7 +746,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 	// falling edge
 	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 0) {
-		falling_edge++;
+		if(rising_edge == 0) {
+			falling_edge = 0;
+		}
+		else {
+			falling_edge++;
+		}
 		printf("falling edge : %d\r\n", falling_edge);
 	}
 
@@ -735,6 +785,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		if (apply_flag > 0) {
 			get_time_apply++;
 		}
+		if (exit_flag > 0) {
+			get_time_exit++;
+		}
 		get_time++;
 	}
 }
@@ -742,16 +795,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 /* USER CODE END 4 */
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
-void Error_Handler(void) {
-	/* USER CODE BEGIN Error_Handler_Debug */
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	__disable_irq();
 	while (1) {
 	}
-	/* USER CODE END Error_Handler_Debug */
+  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
