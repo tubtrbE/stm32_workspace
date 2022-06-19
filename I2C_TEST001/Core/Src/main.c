@@ -63,10 +63,6 @@ uint32_t get_time_apply = 0;
 uint32_t exit_flag = 0;
 uint32_t get_time_exit = 0;
 
-
-
-
-
 //LCD variable
 
 //i2c scan()
@@ -108,6 +104,7 @@ uint32_t rx;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 int __io_putchar(int ch) {
@@ -117,6 +114,8 @@ int __io_putchar(int ch) {
 
 void SystemClock_Config(void);
 ADC_StatusTypeDef button_status(uint32_t value);
+void screen(int cursor);
+
 void I2C_Scan();
 HAL_StatusTypeDef LCD_SendInternal(uint8_t lcd_addr, uint8_t data,
 		uint8_t flags);
@@ -186,24 +185,28 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	init();
 	LCD_Init(LCD_ADDR);
-//	LCD_SendCommand(LCD_ADDR, 0b00000001);
+	up = 0;
+	down = 0;
+	left = 0;
+	right = 0;
 
+
+	//	LCD_SendCommand(LCD_ADDR, 0b00000001);
 
 	while (1) {
 		//init the time_temp
 		sTime_temp.Hours = 0;
 		sTime_temp.Minutes = 0;
 		sTime_temp.Seconds = 0;
-		sTime_temp.TimeFormat = 1;
-
+		sTime_temp.TimeFormat = 0;
 
 		//Main loop
 		while (mode == 0) {
-			HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
-			HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BCD);
+			HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+			HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 			HAL_ADC_Start(&hadc1);
 
-			sprintf(Time, "%s %02x:%02x:%02x", ampm[sTime.TimeFormat],
+			sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
 					sTime.Hours, sTime.Minutes, sTime.Seconds);
 
 			// LCD up
@@ -224,31 +227,25 @@ int main(void)
 
 					if (rising_edge == 1 && falling_edge >= 1) {
 
-						//init the user button
-						rising_edge = 0;
-						falling_edge = 0;
-
 						// init the temp
 						sTime_temp.Hours = 0;
 						sTime_temp.Minutes = 0;
 						sTime_temp.Seconds = 0;
 						sTime_temp.TimeFormat = 0;
-						mode = 1;
+						cursor = 0;
+						// LCD up
+						LCD_Init(LCD_ADDR);
+						LCD_SendCommand(LCD_ADDR, 0b10000000);
+						LCD_SendString(LCD_ADDR, "Set Time Mode");
+						screen(cursor);
 
-						//screen func=====================================================
-						sprintf(Time_temp, "%s %02x:%02x:%02x",
-								ampm[sTime_temp.TimeFormat],
-								sTime_temp.Hours, sTime_temp.Minutes,
-								sTime_temp.Seconds);
-						LCD_SendCommand(LCD_ADDR, 0b11000000);
-						LCD_SendString(LCD_ADDR, Time_temp);
-						for (int i = 0; i < 11; i++) {
-							LCD_SendCommand(LCD_ADDR, 0b00010000);
-						}
-						//screen func=====================================================
 
 						LCD_SendCommand(LCD_ADDR, 0b00001111);
-						printf("sTime_temp.TimeFormat : %d\r\n", sTime_temp.TimeFormat);
+
+						//init the user button
+						rising_edge = 0;
+						falling_edge = 0;
+						mode = 1;
 						printf("one click==========================\r\n");
 					}
 
@@ -256,6 +253,9 @@ int main(void)
 						rising_edge = 0;
 						falling_edge = 0;
 						mode = 2;
+						LCD_Init(LCD_ADDR);
+						LCD_SendCommand(LCD_ADDR, 0b10000000);
+						LCD_SendString(LCD_ADDR, "Alarm Mode");
 						printf("two click++++++++++++++++++++++++++\r\n");
 					}
 
@@ -275,19 +275,12 @@ int main(void)
 			// start adc for read adc_value
 			HAL_ADC_Start(&hadc1);
 
-
-
 			// IF USER CLICK THE USER BUTTON
 			// USER CAN CHOOSE EXIT OR APPLY
 			if (rising_edge >= 1) {
 
 				// this flag is check the exit or apply
 				apply_flag = 1;
-
-				// this flag is give some rest time
-				// because user button can be pushed by user too short
-				exit_flag = 1;
-
 
 				// EXIT without apply
 				if (falling_edge > 0) {
@@ -303,14 +296,6 @@ int main(void)
 					mode = 0;
 					printf("MODE exit\r\n");
 
-//					//break the while
-//					if (get_time_exit > 0) {
-//						//break the while
-//						exit_flag = 0;
-//						get_time_exit = 0;
-//						printf("exit_flag : %d\r\n", exit_flag);
-//						printf("get_time_exit : %d\r\n", get_time_exit);
-//					}
 					// ===========================================init func
 				}
 				// APPLY and exit
@@ -321,7 +306,7 @@ int main(void)
 					sTime.Minutes = sTime_temp.Minutes;
 					sTime.Seconds = sTime_temp.Seconds;
 					sTime.TimeFormat = sTime_temp.TimeFormat;
-					HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
+					HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 
 					// ===========================================init func
 					// turn off the blink
@@ -336,130 +321,151 @@ int main(void)
 					mode = 0;
 					printf("MODE APPLY\r\n");
 
-//					//break the while
-//					if (get_time_exit > 0) {
-//						//break the while
-//						printf("exit_flag : %d\r\n", exit_flag);
-//						printf("get_time_exit : %d\r\n", get_time_exit);
-//						exit_flag = 0;
-//						get_time_exit = 0;
-//					}
 					// ===========================================init func
-
 				}
-
 			}
 
 			if (get_time > 0) {
+
 				if (up > 0) {
 					//AM or PM switching
 					if (cursor == 0) {
 						if (sTime_temp.TimeFormat == 0) {
 							sTime_temp.TimeFormat = 1;
-
-							//screen func=====================================================
-							sprintf(Time_temp, "%s %02x:%02x:%02x",
-									ampm[sTime_temp.TimeFormat],
-									sTime_temp.Hours, sTime_temp.Minutes,
-									sTime_temp.Seconds);
-							LCD_SendCommand(LCD_ADDR, 0b11000000);
-							LCD_SendString(LCD_ADDR, Time_temp);
-							for (int i = 0; i < 11; i++) {
-								LCD_SendCommand(LCD_ADDR, 0b00010000);
+							if (sTime_temp.Hours == 0) {
+								sTime_temp.Hours = 12;
 							}
-							//screen func=====================================================
+							screen(cursor);
 
-						} else {
+						}
+						else if (sTime_temp.TimeFormat == 1) {
 							sTime_temp.TimeFormat = 0;
-							//screen func=====================================================
-							sprintf(Time_temp, "%s %02x:%02x:%02x",
-									ampm[sTime_temp.TimeFormat],
-									sTime_temp.Hours, sTime_temp.Minutes,
-									sTime_temp.Seconds);
-							LCD_SendCommand(LCD_ADDR, 0b11000000);
-							LCD_SendString(LCD_ADDR, Time_temp);
-							for (int i = 0; i < 11; i++) {
-								LCD_SendCommand(LCD_ADDR, 0b00010000);
+							if (sTime_temp.Hours == 12) {
+								sTime_temp.Hours = 0;
 							}
-							//screen func=====================================================
+							screen(cursor);
 						}
 					}
 
 					// 10H switching
 					else if (cursor == 3) {
-						if (sTime_temp.Hours < 10) {
 
-							// because of BCD shift << 4
-							sTime_temp.Hours += 1 << 4;
-							//screen func============================(int cursor)====================
-							sprintf(Time_temp, "%s %02x:%02x:%02x",
-									ampm[sTime_temp.TimeFormat],
-									sTime_temp.Hours, sTime_temp.Minutes,
-									sTime_temp.Seconds);
-							LCD_SendCommand(LCD_ADDR, 0b11000000);
-							LCD_SendString(LCD_ADDR, Time_temp);
-							for (int i = 0; i < 8; i++) {
-								LCD_SendCommand(LCD_ADDR, 0b00010000);
-							}
-							//screen func=====================================================
-							printf("sTime_temp.Hours : %d\r\n",
-									sTime_temp.Hours);
+						if (sTime_temp.Hours < 3) {
+							sTime_temp.Hours += 10;
 						}
-
+						screen(cursor);
 					}
+
 					// 1H switching
 					else if (cursor == 4) {
 
+						//AM
+						if (sTime_temp.TimeFormat == 0) {
+							// 0 ~ 11
+							if (0 <= sTime_temp.Hours && sTime_temp.Hours < 11) {
+								sTime_temp.Hours ++;
+							}
+						}
+						//PM
+						else if (sTime_temp.TimeFormat == 1) {
+
+							// 1 ~ 12
+							if (1 <= sTime_temp.Hours && sTime_temp.Hours < 12) {
+								sTime_temp.Hours ++;
+							}
+						}
+						screen(cursor);
 					}
 
 					// 10M switching
 					else if (cursor == 6) {
-
+						if (0 <= sTime_temp.Minutes && sTime_temp.Minutes < 50) {
+							sTime_temp.Minutes += 10;
+						}
+						screen(cursor);
 					}
 					// 1M switching
 					else if (cursor == 7) {
-
+						if (0 <= sTime_temp.Minutes && sTime_temp.Minutes < 59) {
+							sTime_temp.Minutes += 1;
+						}
+						screen(cursor);
 					}
 
 					// 10S switching
 					else if (cursor == 9) {
-
+						if (0 <= sTime_temp.Seconds && sTime_temp.Seconds < 50) {
+							sTime_temp.Seconds += 10;
+						}
+						screen(cursor);
 					}
 					// 1S switching
 					else if (cursor == 10) {
-
+						if (0 <= sTime_temp.Seconds && sTime_temp.Seconds < 59) {
+							sTime_temp.Seconds += 1;
+						}
+						screen(cursor);
 					}
 
 					// clear the up flag
 					up = 0;
 				}
 				if (down > 0) {
+
+					//AM or PM switching
 					if (cursor == 0) {
 						if (sTime_temp.TimeFormat == 0) {
 							sTime_temp.TimeFormat = 1;
-							sprintf(Time_temp, "%s %02x:%02x:%02x",
-									ampm[sTime_temp.TimeFormat],
-									sTime_temp.Hours, sTime_temp.Minutes,
-									sTime_temp.Seconds);
-							LCD_SendCommand(LCD_ADDR, 0b11000000);
-							LCD_SendString(LCD_ADDR, Time_temp);
-							for (int i = 0; i < 11; i++) {
-								LCD_SendCommand(LCD_ADDR, 0b00010000);
+							if (sTime_temp.Hours == 0) {
+								sTime_temp.Hours = 12;
 							}
-
-						} else {
-							sTime_temp.TimeFormat = 0;
-							sprintf(Time_temp, "%s%02x:%02x:%02x",
-									ampm[sTime_temp.TimeFormat],
-									sTime_temp.Hours, sTime_temp.Minutes,
-									sTime_temp.Seconds);
-							LCD_SendCommand(LCD_ADDR, 0b11000000);
-							LCD_SendString(LCD_ADDR, Time_temp);
-							for (int i = 0; i < 11; i++) {
-								LCD_SendCommand(LCD_ADDR, 0b00010000);
-							}
-
+							screen(cursor);
 						}
+						else if (sTime_temp.TimeFormat == 1) {
+							sTime_temp.TimeFormat = 0;
+							if (sTime_temp.Hours == 12) {
+								sTime_temp.Hours = 0;
+							}
+							screen(cursor);
+						}
+					}
+
+					// 1H switching
+					else if (cursor == 4) {
+						if (sTime_temp.Hours > 0) {
+							sTime_temp.Hours --;
+						}
+						screen(cursor);
+					}
+
+					// 10M switching
+					else if (cursor == 6) {
+						if (0 < sTime_temp.Minutes && sTime_temp.Minutes <= 50) {
+							sTime_temp.Minutes -= 10;
+						}
+						screen(cursor);
+					}
+					// 1M switching
+					else if (cursor == 7) {
+						if (0 < sTime_temp.Minutes && sTime_temp.Minutes <= 59) {
+							sTime_temp.Minutes -= 1;
+						}
+						screen(cursor);
+					}
+
+					// 10S switching
+					else if (cursor == 9) {
+						if (0 < sTime_temp.Seconds && sTime_temp.Seconds <= 50) {
+							sTime_temp.Seconds -= 10;
+						}
+						screen(cursor);
+					}
+					// 1S switching
+					else if (cursor == 10) {
+						if (0 < sTime_temp.Seconds && sTime_temp.Seconds <= 59) {
+							sTime_temp.Seconds -= 1;
+						}
+						screen(cursor);
 					}
 
 					// clear the down flag
@@ -524,10 +530,11 @@ int main(void)
 
 			}
 		}
+
 		//==========================================================================================================
 		//AL loop
 		while (mode == 2) {
-
+			HAL_ADC_Start(&hadc1);
 			if (rising_edge >= 1 && falling_edge >= 1) {
 				rising_edge = 0;
 				falling_edge = 0;
@@ -535,8 +542,209 @@ int main(void)
 				printf("mode reset\r\n");
 			}
 
-			// clear the get_time flag (to measure the time)
-			get_time = 0;
+			if (get_time > 0) {
+
+				if (up > 0) {
+					//AM or PM switching
+					if (cursor == 0) {
+						if (sTime_temp.TimeFormat == 0) {
+							sTime_temp.TimeFormat = 1;
+							if (sTime_temp.Hours == 0) {
+								sTime_temp.Hours = 12;
+							}
+							screen(cursor);
+
+						}
+						else if (sTime_temp.TimeFormat == 1) {
+							sTime_temp.TimeFormat = 0;
+							if (sTime_temp.Hours == 12) {
+								sTime_temp.Hours = 0;
+							}
+							screen(cursor);
+						}
+					}
+
+					// 10H switching
+					else if (cursor == 3) {
+
+						if (sTime_temp.Hours < 3) {
+							sTime_temp.Hours += 10;
+						}
+						screen(cursor);
+					}
+
+					// 1H switching
+					else if (cursor == 4) {
+
+						//AM
+						if (sTime_temp.TimeFormat == 0) {
+							// 0 ~ 11
+							if (0 <= sTime_temp.Hours && sTime_temp.Hours < 11) {
+								sTime_temp.Hours ++;
+							}
+						}
+						//PM
+						else if (sTime_temp.TimeFormat == 1) {
+
+							// 1 ~ 12
+							if (1 <= sTime_temp.Hours && sTime_temp.Hours < 12) {
+								sTime_temp.Hours ++;
+							}
+						}
+						screen(cursor);
+					}
+
+					// 10M switching
+					else if (cursor == 6) {
+						if (0 <= sTime_temp.Minutes && sTime_temp.Minutes < 50) {
+							sTime_temp.Minutes += 10;
+						}
+						screen(cursor);
+					}
+					// 1M switching
+					else if (cursor == 7) {
+						if (0 <= sTime_temp.Minutes && sTime_temp.Minutes < 59) {
+							sTime_temp.Minutes += 1;
+						}
+						screen(cursor);
+					}
+
+					// 10S switching
+					else if (cursor == 9) {
+						if (0 <= sTime_temp.Seconds && sTime_temp.Seconds < 50) {
+							sTime_temp.Seconds += 10;
+						}
+						screen(cursor);
+					}
+					// 1S switching
+					else if (cursor == 10) {
+						if (0 <= sTime_temp.Seconds && sTime_temp.Seconds < 59) {
+							sTime_temp.Seconds += 1;
+						}
+						screen(cursor);
+					}
+
+					// clear the up flag
+					up = 0;
+				}
+				if (down > 0) {
+
+					//AM or PM switching
+					if (cursor == 0) {
+						if (sTime_temp.TimeFormat == 0) {
+							sTime_temp.TimeFormat = 1;
+							if (sTime_temp.Hours == 0) {
+								sTime_temp.Hours = 12;
+							}
+							screen(cursor);
+						}
+						else if (sTime_temp.TimeFormat == 1) {
+							sTime_temp.TimeFormat = 0;
+							if (sTime_temp.Hours == 12) {
+								sTime_temp.Hours = 0;
+							}
+							screen(cursor);
+						}
+					}
+
+					// 1H switching
+					else if (cursor == 4) {
+						if (sTime_temp.Hours > 0) {
+							sTime_temp.Hours --;
+						}
+						screen(cursor);
+					}
+
+					// 10M switching
+					else if (cursor == 6) {
+						if (0 < sTime_temp.Minutes && sTime_temp.Minutes <= 50) {
+							sTime_temp.Minutes -= 10;
+						}
+						screen(cursor);
+					}
+					// 1M switching
+					else if (cursor == 7) {
+						if (0 < sTime_temp.Minutes && sTime_temp.Minutes <= 59) {
+							sTime_temp.Minutes -= 1;
+						}
+						screen(cursor);
+					}
+
+					// 10S switching
+					else if (cursor == 9) {
+						if (0 < sTime_temp.Seconds && sTime_temp.Seconds <= 50) {
+							sTime_temp.Seconds -= 10;
+						}
+						screen(cursor);
+					}
+					// 1S switching
+					else if (cursor == 10) {
+						if (0 < sTime_temp.Seconds && sTime_temp.Seconds <= 59) {
+							sTime_temp.Seconds -= 1;
+						}
+						screen(cursor);
+					}
+
+					// clear the down flag
+					down = 0;
+				}
+
+				if (left > 0) {
+					if (cursor > 0) {
+						cursor--;
+						LCD_SendCommand(LCD_ADDR, 0b00010000);
+
+						if (cursor == 8) {
+							cursor--;
+							LCD_SendCommand(LCD_ADDR, 0b00010000);
+						}
+
+						if (cursor == 5) {
+							cursor--;
+							LCD_SendCommand(LCD_ADDR, 0b00010000);
+						}
+
+						if (cursor == 2) {
+							cursor -= 2;
+							LCD_SendCommand(LCD_ADDR, 0b00010000);
+							LCD_SendCommand(LCD_ADDR, 0b00010000);
+						}
+					}
+
+					// clear the left flag
+					left = 0;
+				}
+
+				if (right > 0) {
+
+					if (cursor < 10) {
+						cursor++;
+						LCD_SendCommand(LCD_ADDR, 0b00010100);
+
+						if (cursor == 8) {
+							cursor++;
+							LCD_SendCommand(LCD_ADDR, 0b00010100);
+						}
+
+						if (cursor == 5) {
+							cursor++;
+							LCD_SendCommand(LCD_ADDR, 0b00010100);
+						}
+
+						if (cursor == 1) {
+							cursor += 2;
+							LCD_SendCommand(LCD_ADDR, 0b00010100);
+							LCD_SendCommand(LCD_ADDR, 0b00010100);
+						}
+					}
+
+					//clear the right flag
+					right = 0;
+				}
+
+				// clear the get_time flag (to measure the time)
+				get_time = 0;
+			}
 		}
 		//==========================================================================================================
 		//Song choice loop
@@ -652,6 +860,16 @@ ADC_StatusTypeDef button_status(uint32_t value) {
 	return NONE;
 }
 
+void screen(int cursor) {
+	sprintf(Time_temp, "%s %02d:%02d:%02d", ampm[sTime_temp.TimeFormat],
+			sTime_temp.Hours, sTime_temp.Minutes, sTime_temp.Seconds);
+	LCD_SendCommand(LCD_ADDR, 0b11000000);
+	LCD_SendString(LCD_ADDR, Time_temp);
+	for (int i = 0; i < 11 - cursor; i++) {
+		LCD_SendCommand(LCD_ADDR, 0b00010000);
+	}
+}
+
 void I2C_Scan() {
 	char info[] = "Scanning I2C bus...\r\n";
 	HAL_UART_Transmit(&huart3, (uint8_t*) info, strlen(info), HAL_MAX_DELAY);
@@ -660,7 +878,7 @@ void I2C_Scan() {
 		res = HAL_I2C_IsDeviceReady(&hi2c1, i << 1, 1, 10);
 		if (res == HAL_OK) {
 			char msg[64];
-			snprintf(msg, sizeof(msg), "0x%02X", i);
+			sprintf(msg, sizeof(msg), "0x%02X", i);
 			HAL_UART_Transmit(&huart3, (uint8_t*) msg, strlen(msg),
 			HAL_MAX_DELAY);
 		} else {
@@ -746,10 +964,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 	// falling edge
 	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 0) {
-		if(rising_edge == 0) {
+		if (rising_edge == 0) {
 			falling_edge = 0;
-		}
-		else {
+		} else {
 			falling_edge++;
 		}
 		printf("falling edge : %d\r\n", falling_edge);
