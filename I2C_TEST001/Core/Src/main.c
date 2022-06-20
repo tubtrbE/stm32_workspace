@@ -91,9 +91,11 @@ char ampm[2][3] = { "AM", "PM" };
 RTC_TimeTypeDef sTime;
 RTC_DateTypeDef sDate;
 
-// RTC_mode variable
+// RTC_mode1 variable
 char Time_temp[20];
 RTC_TimeTypeDef sTime_temp;
+// RTC_mode2 variable
+char Time_AL[20] = {};
 RTC_TimeTypeDef sTime_AL;
 
 // I2C variable
@@ -207,6 +209,10 @@ int main(void) {
 
 			sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
 					sTime.Hours, sTime.Minutes, sTime.Seconds);
+
+			if (strcmp(Time, Time_AL) == 0) {
+				printf("Alarm is playing!!!\r\n");
+			}
 
 			// LCD up
 			LCD_SendCommand(LCD_ADDR, 0b10000000);
@@ -565,6 +571,9 @@ int main(void) {
 			// USER CAN CHOOSE EXIT OR APPLY
 			if (rising_edge >= 1) {
 
+				// Alarm init
+				sprintf(Time_AL, "");
+
 				// this flag is check the exit or apply
 				apply_flag = 1;
 
@@ -587,12 +596,8 @@ int main(void) {
 				// APPLY and exit
 				if (falling_edge == 0 && get_time_apply > 4) {
 
-					// sTime is now applied by user
-					sTime.Hours = sTime_AL.Hours;
-					sTime.Minutes = sTime_AL.Minutes;
-					sTime.Seconds = sTime_AL.Seconds;
-					sTime.TimeFormat = sTime_AL.TimeFormat;
-					HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+					sprintf(Time_AL, "%s %02d:%02d:%02d", ampm[sTime_AL.TimeFormat],
+							sTime_AL.Hours, sTime_AL.Minutes, sTime_AL.Seconds);
 
 					// ===========================================init func
 					// turn off the blink
