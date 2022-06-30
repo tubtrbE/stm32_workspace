@@ -25,12 +25,35 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef enum {
+	// APB1 == 90[mhz]
+	// prescaler == 30-1
+	N = 0,
+	C = 11762,
+    D = 10469,
+    E = 9318,
+    F = 8791,
+    G = 7825,
+    A = 6966,
+    B = 6200,
+}_PITCH;
+typedef enum {
+	// APB1 == 90[mhz]
+	// prescaler == 30-1
+	N = 0,
+	C = 11762,
+    D = 10469,
+    E = 9318,
+    F = 8791,
+    G = 7825,
+    A = 6966,
+    B = 6200,
+}_PITCH;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -46,13 +69,17 @@
 
 /* USER CODE BEGIN PV */
 
+  uint32_t pitch_main;
+  uint32_t volume_main = 3;
+  uint32_t time_main = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
-
+void note(uint32_t pitch, uint32_t volume, uint32_t time, uint32_t octave);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -103,132 +130,56 @@ int main(void)
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 
-  uint32_t num = 0;
-  uint32_t denom = 300000;
+  //이무진 신호등 1절
 
+  char* verse1[] = {
+
+		  /////////////////////////////////////////////////////
+		  "N5N" ,"C5N", "D5N", "E5N","C5N","G4N",
+		  "C5N","G4N","C5N","C5N","D5N","E5N","E5N","N5N",
+		  "N5N" ,"C5N", "D5N", "E5N","C5N","G4N",
+		  "C5N","G4N","C5N","C5N","E5N"    ,"F5N","E5N","D5N","C5N","C5N",
+		  /////////////////////////////////////////////////////
+  };
+
+  char* verse1_time[15] = {
+		  {4,8,8,4,8,8},
+		  {8,16,16,32,16,32,4,4},
+		  {4,8,8,4,8,8},
+		  {8,16,16,16,6,16,16,16,8,16},
+  };
+  int n = 0;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   while (1)
   {
-
-
-	  // 도
-	  num = 11762;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
+	  n = PITCH;
+	  for (int i = 0; i < 20; i++) {
+		  n = atoi(verse1[i]);
+		  printf("%d\r\n", n);
+		  HAL_Delay(500);
 	  }
+//		for (int j = 0; j < 15; j++) {
+//			note(verse1->j, verse1->j, verse1->j, verse1->j);
+//		}
+//		for (int j = 0; j < 15; j++) {
+//		}
+//		for (int j = 0; j < 15; j++) {
+//		}
+//		for (int j = 0; j < 15; j++) {
+//		}
 
-
-	  // 도
-	  num = 11762;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-	  //솔
-	  num = 7825;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-
-	  //솔
-	  num = 7825;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-
-	  //라
-	  num = 6966;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-
-	  //라
-	  num = 6966;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-//////////////////////////////////////////////////////////////////////////
-	  //솔
-	  num = 7825;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 1000; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/(denom*2);
-		  HAL_Delay(1);
-	  }
-
-	  //////////////////////////////////////////////////////////////////////////
-
-	  //파
-	  num = 8791;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-
-	  //파
-	  num = 8791;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-
-	  //미
-	  num = 9318;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-
-	  //미
-	  num = 9318;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-
-	  // 레
-	  num = 10469;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-
-	  // 레
-	  num = 10469;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 500; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/denom;
-		  HAL_Delay(1);
-	  }
-
-	  // 도
-	  num = 11762;
-	  TIM3 -> ARR = num/2;
-	  for(int i  = 1000; i >= 0; i--) {
-		  TIM3 -> CCR1 = (num * i)/(denom*2);
-		  HAL_Delay(1);
-	  }
-
+//	  note(C, 2, 1000, 4); //도
+//	  note(D, 2, 1000, 4); //레
+//	  note(E, 2, 1000, 4); //미
+//	  note(F, 2, 1000, 4); //파
+//	  note(G, 2, 1000, 4); //솔
+//	  note(A, 2, 1000, 4); //라
+//	  note(B, 2, 1000, 4); //시
 
 
   }
@@ -304,7 +255,58 @@ static void MX_NVIC_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void note(uint32_t pitch, uint32_t volume, uint32_t time, uint32_t octave){
 
+	uint32_t start_tick = 0;
+	uint32_t cur_tick = 0;
+	uint32_t tick_gap = 0;
+
+	// 1/1000 is enough to turn off the volume
+	if (pitch == 0) {
+		volume = 2000;
+	}
+
+	// avoid error(ARR == CCR)
+	if (volume <= 2) {
+		volume = 2;
+	}
+
+	// setting the octave
+	if (octave != 4) {
+		if (octave < 4) {
+			for (int i = 0; i < 4-octave; i++) {
+				pitch *= 2;
+			}
+		}
+		else {
+			for (int i = 0; i < octave-4; i++) {
+				pitch /= 2;
+			}
+		}
+	}
+
+	TIM3->ARR = pitch;
+	TIM3->CCR1 = pitch/volume;
+
+	start_tick = HAL_GetTick();
+	tick_gap = 0;
+	while (tick_gap >= 0) {
+		cur_tick = HAL_GetTick();
+		tick_gap = cur_tick - start_tick;
+		TIM3->CCR1 = pitch/volume;
+
+		if (tick_gap >= time) {
+			volume = 2;
+			tick_gap = 0;
+			break;
+		}
+		printf("volume : %d\r\n", volume);
+		printf("tick_gap : %d\r\n", tick_gap);
+		if (tick_gap%5 == 0 || tick_gap%4 == 0 || tick_gap%3 == 0) {
+			volume += 2;
+		}
+	}
+}
 /* USER CODE END 4 */
 
 /**
