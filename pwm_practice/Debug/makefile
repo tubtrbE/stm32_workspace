@@ -60,8 +60,8 @@ all: main-build
 main-build: pwm_practice.elf secondary-outputs
 
 # Tool invocations
-pwm_practice.elf pwm_practice.map: $(OBJS) $(USER_OBJS) C:\workspace_stm32\pwm_practice\STM32F429ZITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "pwm_practice.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\workspace_stm32\pwm_practice\STM32F429ZITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="pwm_practice.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+pwm_practice.elf pwm_practice.map: $(OBJS) $(USER_OBJS) C:\Users\ggssg\Desktop\stm32_workspace\stm32_workspace\pwm_practice\STM32F429ZITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "pwm_practice.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\ggssg\Desktop\stm32_workspace\stm32_workspace\pwm_practice\STM32F429ZITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="pwm_practice.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

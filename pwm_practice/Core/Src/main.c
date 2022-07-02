@@ -25,6 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
 #include <stdlib.h>
 /* USER CODE END Includes */
 
@@ -58,9 +59,7 @@ typedef enum {
 
 /* USER CODE BEGIN PV */
 
-uint32_t pitch_main;
-uint32_t volume_main;
-uint32_t time_main;
+
 
 /* USER CODE END PV */
 
@@ -68,7 +67,7 @@ uint32_t time_main;
 void SystemClock_Config(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
-void note(uint32_t pitch, uint32_t volume, uint32_t time, uint32_t octave);
+void note(char pitch, char octave, char temp, int time, int volume);
 uint32_t pitch_change (char pitch_text);
 uint32_t octave_change (char octave_text);
 uint32_t temp_change (char temp_text);
@@ -84,168 +83,323 @@ int __io_putchar(int ch) {
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
-int main(void) {
-	/* USER CODE BEGIN 1 */
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_RTC_Init();
-	MX_TIM3_Init();
-	MX_USART3_UART_Init();
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_RTC_Init();
+  MX_TIM3_Init();
+  MX_USART3_UART_Init();
 
-	/* Initialize interrupts */
-	MX_NVIC_Init();
-	/* USER CODE BEGIN 2 */
+  /* Initialize interrupts */
+  MX_NVIC_Init();
+  /* USER CODE BEGIN 2 */
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 
-	//이무진 신호등 1절
 
 	char *verse1[] = {
 
 	///////////////////////////////////////////////////////////
-			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N", "C5N", "G4N", "C5N",
-			"C5N", "D5N", "E5N", "E5N", "N5N", "N5N", "C5N", "D5N", "E5N",
-			"C5N", "G4N", "C5N", "G4N", "C5N", "C5N", "E5N", "F5N", "E5N",
-			"D5N", "C5N", "C5N",
+			// C도레미 도시
+			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//도시 도레미
+			"C5N", "G4N", "C5N", "D5N", "E5N",
+
+			// 도레미 도시
+			"F3N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//도시도미 파미레도
+			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
+
+			// 도레미 도시
+			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//도시 도레미
+			"C5N", "G4N", "C5N", "D5N", "E5N",
+
+			//N미파미파미도 레N
+			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
+
+			// N도레미 도시
+			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//도시 도레미
+			"C5N", "G4N", "C5N", "D5N", "E5N",
+
+			// 도레미 도시
+			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//도시도미 파미레도
+			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
+
+			// N도레미 도시
+			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//도시 도파미
+			"C5N", "G4N", "C5N", "F5N", "E5N",
+
+			//N미파미파미도 레N
+			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
+
+			//N레레레레도시도시도
+			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N",
+			//N도미파미레도레
+			"N5N","C5N","E5N","F5N","E5N","D5N","C5N","D5N",
+
+			//NN도레미
+			"N5N","N5N","C5N","D5N","E5N",
+
+			//N레레레레도시도시도레미
+			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N", "D5N", "E5N",
+
+			//N라라라라솔미솔
+			"N4N","A4N","A4N","A4N","A4N","G4N","E4N","G4N",
+
+			//N미레  도라라솔
+			"N5N","E5N","D5N",    "C5N","A5N","A5N","G5N",
+
+			//미레도도도레미
+			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
+
+			//미레도파파미도
+			"E5N","D5N","C5N","F5N","F5N","E5N","C5N",
+
+			//N도도미파레
+			"N5N","C5N","C5N","E5N","F5N","D5N",
+/////////////////////////////////////////////////////////////////
+			//미레  도라라솔
+			"E5N","D5N",    "C5N","A5N","A5N","G5N",
+			//미레도도도레미
+			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
+			//미레도파파미도 도미레
+			"E5N","D5N","C5N","F5N","F5N","E5N","C5N","C5N","E5N","D5N",
+			//미파미레도
+			"E5N","F5N","E5N","D5N","C5N",
+
+
+			//노래끝
+			"0",
 	///////////////////////////////////////////////////////////
 			};
 
-	int verse1_time[] = { 4, 8, 8, 4, 8, 8, 8, 16, 16, 32, 16, 32, 4, 4, 4, 8,
-			8, 4, 8, 8, 8, 16, 16, 16, 6, 16, 16, 16, 8, 16 };
+	int verse1_time[] = {
+			//도레미도시도시도레미
+			4,8,8,4,8,8,
+			8,8,8,8,2,
 
-		/* USER CODE END 2 */
+			4,8,8,4,8,8,
+			8,8,8,8,8,8,8,8,
 
-		/* Infinite loop */
-		/* USER CODE BEGIN WHILE */
+			4,8,8,4,8,8,
+			8,8,8,8,2,
+
+			4,8,8,8,8,8,8,2,2,
+
+			4,8,8,4,8,8,
+			8,8,8,8,2,
+
+			4,8,8,4,8,8,
+			8,8,8,8,8,8,8,8,
+
+			4,8,8,4,8,8,
+			8,8,8,8,2,
+			//미파미파미도레
+			4,8,8,8,8,8,8,2,2,
+
+			4,8,8,8,8,8,8,8,8,4,
+			4,8,8,4,4,8,8,4,
+
+			2,8,8,8,8,
+			4,8,8,8,8,8,8,8,8,8,8,2,
+
+			8,8,8,8,8,8,8,8,
+			//미레도 라라솔
+			1.5,8,8,4,8,8,4,
+
+			//미레도도도레미
+			8,8,8,8,8,8,4,
+
+			//미레도 파파미도
+			8,8,4,8,8,8,8,
+
+			//N도도미파레
+			8,8,4,8,8,4,
+///////////////////////////////////////////////////
+			//미레도 라라솔
+			8,8,4,8,8,4,
+
+			//미레도도도레미
+			8,8,8,8,8,8,4,
+
+			//미레도 파파미도  도미레
+			8,8,4,8,8,8,8,8,8,2,
+
+			//미파미레도
+			8,8,8,8,1
+	};
+
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 
 	while (1) {
+
+
+
+//		int i = 0;
+//		int j = 0;
+//		int count_time = 0;
+//		for (int k = 0; k < 30; k++) {
+//			uint32_t pitch = 0;
+//			uint32_t octave = 0;
+//			int time = 0;
+//			char tempP = verse1[i][0];
+//			char tempO = verse1[i][1];
+//			char tempT = verse1[i][2];
+//			if (verse1[i] != 0) {
+//				time = verse1_time[count_time];
+//				count_time++;
+//				note(tempP, tempO, tempT, 2000/time, 2);
+//				i++;
+//			}
+//			else {
+//				break;
+//			}
+//		}
+
+
 		int i = 0;
 		int j = 0;
 		int count_time = 0;
-		while (verse1[i][j] != 0) {
-			for (j = 0; j < 3; j++) {
-				uint32_t pitch = 0;
-				uint32_t octave = 0;
-				int time = 0;
-
-				pitch = pitch_change(verse1[i][0]);
-				octave = pitch_change(verse1[i][1]);
+		while (strlen(verse1[i]) == 3) {
+			int time = 0;
+			char tempP = verse1[i][0];
+			char tempO = verse1[i][1];
+			char tempT = verse1[i][2];
 				time = verse1_time[count_time];
 				count_time++;
-
-				note(pitch, 200, 2000/time, octave);
-
-				printf("%c\n", verse1[i][0]);
-				printf("%c\n", verse1[i][1]);
-				printf("%c\n", verse1[i][2]);
-				printf("%c\n", verse1_time[count_time]);
+				note(tempP, tempO, tempT, 2000 / time, 4);
+				i++;
+				if (strlen(verse1[i]) == 1){
+				break;
 			}
-			i++;
-			printf("\r\n");
-
 		}
-//	  note(C, 2, 1000, 4); //도
-//	  note(D, 2, 1000, 4); //레
-//	  note(E, 2, 1000, 4); //미
-//	  note(F, 2, 1000, 4); //파
-//	  note(G, 2, 1000, 4); //솔
-//	  note(A, 2, 1000, 4); //라
-//	  note(B, 2, 1000, 4); //시
+
+
+
+//	  note('C', '4', 'N', 500, 2); //?��
+//	  note('D', '4', 'N', 500, 4); //?��
+//	  note('E', '4', 'N', 500, 4); //�?
+//	  note('F', '4', 'N', 500, 4); //?��
+//	  note('G', '4', 'N', 500, 4); //?��
+//	  note('A', '4', 'N', 500, 4); //?��
+//	  note('B', '4', 'N', 500, 4); //?��
+//	  note('C', '5', 'N', 1000, 4); //?��
 
 	}
-	/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-	/* USER CODE BEGIN 3 */
-	/* USER CODE END 3 */
+    /* USER CODE BEGIN 3 */
+  /* USER CODE END 3 */
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
-void SystemClock_Config(void) {
-	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
-	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-	/** Configure the main internal regulator output voltage
-	 */
-	__HAL_RCC_PWR_CLK_ENABLE();
-	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-	/** Initializes the RCC Oscillators according to the specified parameters
-	 * in the RCC_OscInitTypeDef structure.
-	 */
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI
-			| RCC_OSCILLATORTYPE_LSE;
-	RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-	RCC_OscInitStruct.PLL.PLLM = 8;
-	RCC_OscInitStruct.PLL.PLLN = 180;
-	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-	RCC_OscInitStruct.PLL.PLLQ = 4;
-	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-		Error_Handler();
-	}
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSE;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 180;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-	/** Activate the Over-Drive mode
-	 */
-	if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
-		Error_Handler();
-	}
+  /** Activate the Over-Drive mode
+  */
+  if (HAL_PWREx_EnableOverDrive() != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-	/** Initializes the CPU, AHB and APB buses clocks
-	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
-		Error_Handler();
-	}
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /**
- * @brief NVIC Configuration.
- * @retval None
- */
-static void MX_NVIC_Init(void) {
-	/* USART3_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(USART3_IRQn);
+  * @brief NVIC Configuration.
+  * @retval None
+  */
+static void MX_NVIC_Init(void)
+{
+  /* USART3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(USART3_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
-void note(uint32_t pitch, uint32_t volume, uint32_t time, uint32_t octave) {
+void note(char pitch_text, char octave_text, char temp_text, int time, int volume) {
+
+
+	int pitch = pitch_change(pitch_text);
+	int octave = octave_change(octave_text);
+	int temp = temp_change(temp_text);
+
+//	printf("%d %d %d %d %d\n\r", pitch, octave, temp, time, volume);
+
 
 	uint32_t start_tick = 0;
 	uint32_t cur_tick = 0;
@@ -289,8 +443,10 @@ void note(uint32_t pitch, uint32_t volume, uint32_t time, uint32_t octave) {
 			tick_gap = 0;
 			break;
 		}
-//		printf("volume : %d\r\n", volume);
+		// if printf is not activated this while loop doesnt work correctly
+		printf("%d %d %d %d %d\n\r", pitch, octave, temp, time, volume);
 //		printf("tick_gap : %d\r\n", tick_gap);
+//		printf("\r\n");
 		if (tick_gap % 5 == 0 || tick_gap % 4 == 0 || tick_gap % 3 == 0) {
 			volume += 2;
 		}
@@ -298,7 +454,7 @@ void note(uint32_t pitch, uint32_t volume, uint32_t time, uint32_t octave) {
 }
 uint32_t pitch_change (char pitch_text) {
 	if (pitch_text == 'N') {
-		return 0;
+		return N;
 	}
 	else if (pitch_text == 'C') {
 		return C;
@@ -322,11 +478,11 @@ uint32_t pitch_change (char pitch_text) {
 		return B;
 	}
 	else {
-		return 0;
+		return N;
 	}
 }
 uint32_t octave_change (char octave_text) {
-	return octave_text - 'A';
+	return octave_text - '0';
 }
 uint32_t temp_change (char temp_text) {
 	if (temp_text == 'N') {
@@ -346,16 +502,17 @@ uint32_t temp_change (char temp_text) {
 /* USER CODE END 4 */
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
-void Error_Handler(void) {
-	/* USER CODE BEGIN Error_Handler_Debug */
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	__disable_irq();
 	while (1) {
 	}
-	/* USER CODE END Error_Handler_Debug */
+  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
