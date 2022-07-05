@@ -43,6 +43,19 @@ typedef enum {
 	LEFT = 0X04U,
 	RIGHT = 0X05U
 } ADC_StatusTypeDef;
+
+typedef enum {
+	// APB1 == 90[mhz]
+	// prescaler == 30-1
+	N = 0,
+	C = 11762,
+	D = 10469,
+	E = 9318,
+	F = 8791,
+	G = 7825,
+	A = 6966,
+	B = 6200,
+} _PITCH;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -59,6 +72,8 @@ typedef enum {
 /* USER CODE BEGIN PV */
 
 //TIM variable
+uint32_t count2 = 0;
+
 uint32_t get_time = 0;
 uint32_t apply_flag = 0;
 uint32_t get_time_apply = 0;
@@ -112,10 +127,14 @@ int __io_putchar(int ch) {
 	HAL_UART_Transmit(&huart3, &ch, 1, 100);
 	return ch;
 }
-
-void SystemClock_Config(void);
+// i2c adc func
 ADC_StatusTypeDef button_status(uint32_t value);
 void screen(int cursor, RTC_TimeTypeDef sTime_screen);
+// pwm func
+void note(char pitch, char octave, char temp, int time, int volume);
+uint32_t pitch_change (char pitch_text);
+uint32_t octave_change (char octave_text);
+uint32_t temp_change (char temp_text);
 
 /* USER CODE END PFP */
 
@@ -125,48 +144,188 @@ void screen(int cursor, RTC_TimeTypeDef sTime_screen);
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
-int main(void) {
-	/* USER CODE BEGIN 1 */
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_RTC_Init();
-	MX_I2C1_Init();
-	MX_USART3_UART_Init();
-	MX_ADC1_Init();
-	MX_TIM3_Init();
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_RTC_Init();
+  MX_I2C1_Init();
+  MX_USART3_UART_Init();
+  MX_ADC1_Init();
+  MX_TIM3_Init();
+  MX_TIM2_Init();
+  MX_TIM4_Init();
 
-	/* Initialize interrupts */
-	MX_NVIC_Init();
-	/* USER CODE BEGIN 2 */
-	HAL_TIM_Base_Start_IT(&htim3);
+  /* Initialize interrupts */
+  MX_NVIC_Init();
+  /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_3);
+  HAL_TIM_Base_Start_IT(&htim4);
+	char *verse1[] = {
+
+	///////////////////////////////////////////////////////////
+			// C?��?���????? ?��?��
+			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//?��?�� ?��?���?????
+			"C5N", "G4N", "C5N", "D5N", "E5N",
+
+			// ?��?���????? ?��?��
+			"F3N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//?��?��?���????? ?��미레?��
+			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
+
+			// ?��?���????? ?��?��
+			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//?��?�� ?��?���?????
+			"C5N", "G4N", "C5N", "D5N", "E5N",
+
+			//N미파미파미도 ?��N
+			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
+
+			// N?��?���????? ?��?��
+			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//?��?�� ?��?���?????
+			"C5N", "G4N", "C5N", "D5N", "E5N",
+
+			// ?��?���????? ?��?��
+			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//?��?��?���????? ?��미레?��
+			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
+
+			// N?��?���????? ?��?��
+			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			//?��?�� ?��?���?????
+			"C5N", "G4N", "C5N", "F5N", "E5N",
+
+			//N미파미파미도 ?��N
+			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
+
+			//N?��?��?��?��?��?��?��?��?��
+			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N",
+			//N?��미파미레?��?��
+			"N5N","C5N","E5N","F5N","E5N","D5N","C5N","D5N",
+
+			//NN?��?���?????
+			"N5N","N5N","C5N","D5N","E5N",
+
+			//N?��?��?��?��?��?��?��?��?��?���?????
+			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N", "D5N", "E5N",
+
+			//N?��?��?��?��?��미솔
+			"N4N","A4N","A4N","A4N","A4N","G4N","E4N","G4N",
+
+			//N미레  ?��?��?��?��
+			"N5N","E5N","D5N",    "C5N","A5N","A5N","G5N",
+
+			//미레?��?��?��?���?????
+			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
+
+			//미레?��?��?��미도
+			"E5N","D5N","C5N","F5N","F5N","E5N","C5N",
+
+			//N?��?��미파?��
+			"N5N","C5N","C5N","E5N","F5N","D5N",
+/////////////////////////////////////////////////////////////////
+			//미레  ?��?��?��?��
+			"E5N","D5N",    "C5N","A5N","A5N","G5N",
+			//미레?��?��?��?���?????
+			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
+			//미레?��?��?��미도 ?��미레
+			"E5N","D5N","C5N","F5N","F5N","E5N","C5N","C5N","E5N","D5N",
+			//미파미레?��
+			"E5N","F5N","E5N","D5N","C5N",
+
+
+			//?��?��?��
+			"0",
+	///////////////////////////////////////////////////////////
+			};
+
+	int verse1_time[] = {
+			//?��?��미도?��?��?��?��?���?????
+			4,8,8,4,8,8,
+			8,8,8,8,2,
+
+			4,8,8,4,8,8,
+			8,8,8,8,8,8,8,8,
+
+			4,8,8,4,8,8,
+			8,8,8,8,2,
+
+			4,8,8,8,8,8,8,2,2,
+
+			4,8,8,4,8,8,
+			8,8,8,8,2,
+
+			4,8,8,4,8,8,
+			8,8,8,8,8,8,8,8,
+
+			4,8,8,4,8,8,
+			8,8,8,8,2,
+			//미파미파미도?��
+			4,8,8,8,8,8,8,2,2,
+
+			4,8,8,8,8,8,8,8,8,4,
+			4,8,8,4,4,8,8,4,
+
+			2,8,8,8,8,
+			4,8,8,8,8,8,8,8,8,8,8,2,
+
+			8,8,8,8,8,8,8,8,
+			//미레?�� ?��?��?��
+			1.5,8,8,4,8,8,4,
+
+			//미레?��?��?��?���?????
+			8,8,8,8,8,8,4,
+
+			//미레?�� ?��?��미도
+			8,8,4,8,8,8,8,
+
+			//N?��?��미파?��
+			8,8,4,8,8,4,
+///////////////////////////////////////////////////
+			//미레?�� ?��?��?��
+			8,8,4,8,8,4,
+
+			//미레?��?��?��?���?????
+			8,8,8,8,8,8,4,
+
+			//미레?�� ?��?��미도  ?��미레
+			8,8,4,8,8,8,8,8,8,2,
+
+			//미파미레?��
+			8,8,8,8,1
+	};
 
 //  HAL_UART_Receive_IT(&huart3, &rx, 1);
-	/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	init();
 	LCD_Init(LCD_ADDR);
 	up = 0;
@@ -193,7 +352,43 @@ int main(void) {
 					sTime.Hours, sTime.Minutes, sTime.Seconds);
 
 			if (strcmp(Time, Time_AL) == 0) {
+
 				printf("Alarm is playing!!!\r\n");
+				/////////////////////////////////////////////////
+				// LCD up
+				LCD_Init(LCD_ADDR);
+				LCD_SendCommand(LCD_ADDR, 0b10000000);
+				LCD_SendString(LCD_ADDR, "Alarm is playing!!!");
+
+				int i = 0;
+				int j = 0;
+				int count_time = 0;
+				while (strlen(verse1[i]) == 3) {
+					HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+					HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+					sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
+							sTime.Hours, sTime.Minutes, sTime.Seconds);
+
+					int time = 0;
+					char tempP = verse1[i][0];
+					char tempO = verse1[i][1];
+					char tempT = verse1[i][2];
+						time = verse1_time[count_time];
+						count_time++;
+						note(tempP, tempO, tempT, 2000 / time, 4);
+						i++;
+						if (strlen(verse1[i]) == 1){
+						TIM3->CCR3 = 0;
+						break;
+					}
+
+						// LCD down
+						LCD_SendCommand(LCD_ADDR, 0b11000000);
+						LCD_SendString(LCD_ADDR, Time);
+
+				}
+				/////////////////////////////////////////////////
 			}
 
 			// LCD up
@@ -820,78 +1015,88 @@ int main(void) {
 		sprintf(buf, "%d\r\n", ADC_value);
 //		HAL_UART_Transmit_IT(&huart3, buf, sizeof(buf));
 
-		/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
-void SystemClock_Config(void) {
-	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
-	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-	/** Configure the main internal regulator output voltage
-	 */
-	__HAL_RCC_PWR_CLK_ENABLE();
-	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-	/** Initializes the RCC Oscillators according to the specified parameters
-	 * in the RCC_OscInitTypeDef structure.
-	 */
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI
-			| RCC_OSCILLATORTYPE_LSE;
-	RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-	RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-	RCC_OscInitStruct.PLL.PLLM = 8;
-	RCC_OscInitStruct.PLL.PLLN = 180;
-	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-	RCC_OscInitStruct.PLL.PLLQ = 4;
-	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-		Error_Handler();
-	}
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSE;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 180;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-	/** Activate the Over-Drive mode
-	 */
-	if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
-		Error_Handler();
-	}
+  /** Activate the Over-Drive mode
+  */
+  if (HAL_PWREx_EnableOverDrive() != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-	/** Initializes the CPU, AHB and APB buses clocks
-	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
-		Error_Handler();
-	}
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /**
- * @brief NVIC Configuration.
- * @retval None
- */
-static void MX_NVIC_Init(void) {
-	/* USART3_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(USART3_IRQn);
-	/* EXTI15_10_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-	/* TIM3_IRQn interrupt configuration */
-	HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(TIM3_IRQn);
+  * @brief NVIC Configuration.
+  * @retval None
+  */
+static void MX_NVIC_Init(void)
+{
+  /* USART3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(USART3_IRQn);
+  /* EXTI15_10_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+  /* TIM2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  /* TIM3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM3_IRQn);
+  /* TIM4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM4_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
@@ -946,7 +1151,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
-	if (htim->Instance == TIM3) {
+	if (htim->Instance == TIM2) {
 
 //		HAL_ADC_PollForConversion(&hadc1, 10);
 		ADC_value = HAL_ADC_GetValue(&hadc1);
@@ -977,21 +1182,113 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		}
 		get_time++;
 	}
+
+	if (htim->Instance == TIM4) {
+		printf("%d\r\n", count2);
+		count2++;
+	}
+
+}
+
+void note(char pitch_text, char octave_text, char temp_text, int time, int volume) {
+
+
+	int pitch = pitch_change(pitch_text);
+	int octave = octave_change(octave_text);
+	int temp = temp_change(temp_text);
+
+	uint32_t start_tick = 0;
+	uint32_t cur_tick = 0;
+	uint32_t tick_gap = 0;
+
+	// 1/1000 is enough to turn off the volume
+	if (pitch == 0) {
+		volume = 2000;
+	}
+
+	// avoid error(ARR == CCR)
+	if (volume <= 2) {
+		volume = 2;
+	}
+
+	// setting the octave
+	if (octave != 4) {
+		if (octave < 4) {
+			for (int i = 0; i < 4 - octave; i++) {
+				pitch *= 2;
+			}
+		} else {
+			for (int i = 0; i < octave - 4; i++) {
+				pitch /= 2;
+			}
+		}
+	}
+
+	TIM3->ARR = pitch;
+	TIM3->CCR3 = pitch / volume;
+
+}
+uint32_t pitch_change (char pitch_text) {
+	if (pitch_text == 'N') {
+		return N;
+	}
+	else if (pitch_text == 'C') {
+		return C;
+	}
+	else if (pitch_text == 'D') {
+		return D;
+	}
+	else if (pitch_text == 'E') {
+		return E;
+	}
+	else if (pitch_text == 'F') {
+		return F;
+	}
+	else if (pitch_text == 'G') {
+		return G;
+	}
+	else if (pitch_text == 'A') {
+		return A;
+	}
+	else if (pitch_text == 'B') {
+		return B;
+	}
+	else {
+		return N;
+	}
+}
+uint32_t octave_change (char octave_text) {
+	return octave_text - '0';
+}
+uint32_t temp_change (char temp_text) {
+	if (temp_text == 'N') {
+		return 0;
+	}
+	else if (temp_text == 'S') {
+		return 1;
+	}
+	else if (temp_text == 'F') {
+		return -1;
+	}
+	else {
+		return 0;
+	}
 }
 
 /* USER CODE END 4 */
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
-void Error_Handler(void) {
-	/* USER CODE BEGIN Error_Handler_Debug */
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	__disable_irq();
 	while (1) {
 	}
-	/* USER CODE END Error_Handler_Debug */
+  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
