@@ -71,8 +71,19 @@ typedef enum {
 
 /* USER CODE BEGIN PV */
 
+
+
 //TIM variable
-uint32_t count2 = 0;
+uint32_t count_bit = 0;
+uint32_t flag = 0;
+uint32_t flag_alarm = 0;
+uint32_t count_note = 0;
+uint32_t song_time = 0;
+
+
+
+uint32_t sTimestart = 0;
+uint32_t sTimecur = 0;
 
 uint32_t get_time = 0;
 uint32_t apply_flag = 0;
@@ -81,6 +92,8 @@ uint32_t exit_flag = 0;
 uint32_t get_time_exit = 0;
 
 //LCD variable
+uint8_t lcdup[17] = {};
+
 
 //i2c scan()
 uint8_t row;
@@ -183,90 +196,62 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
-  HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
   HAL_TIM_Base_Start_IT(&htim4);
 	char *verse1[] = {
 
 	///////////////////////////////////////////////////////////
-			// C?��?���????? ?��?��
 			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//?��?�� ?��?���?????
 			"C5N", "G4N", "C5N", "D5N", "E5N",
 
-			// ?��?���????? ?��?��
 			"F3N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//?��?��?���????? ?��미레?��
 			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
 
-			// ?��?���????? ?��?��
 			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//?��?�� ?��?���?????
 			"C5N", "G4N", "C5N", "D5N", "E5N",
 
-			//N미파미파미도 ?��N
 			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
 
-			// N?��?���????? ?��?��
 			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//?��?�� ?��?���?????
 			"C5N", "G4N", "C5N", "D5N", "E5N",
 
-			// ?��?���????? ?��?��
 			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//?��?��?���????? ?��미레?��
 			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
 
-			// N?��?���????? ?��?��
 			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//?��?�� ?��?���?????
 			"C5N", "G4N", "C5N", "F5N", "E5N",
 
-			//N미파미파미도 ?��N
 			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
 
-			//N?��?��?��?��?��?��?��?��?��
 			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N",
-			//N?��미파미레?��?��
 			"N5N","C5N","E5N","F5N","E5N","D5N","C5N","D5N",
 
-			//NN?��?���?????
 			"N5N","N5N","C5N","D5N","E5N",
 
-			//N?��?��?��?��?��?��?��?��?��?���?????
 			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N", "D5N", "E5N",
 
-			//N?��?��?��?��?��미솔
 			"N4N","A4N","A4N","A4N","A4N","G4N","E4N","G4N",
 
-			//N미레  ?��?��?��?��
 			"N5N","E5N","D5N",    "C5N","A5N","A5N","G5N",
 
-			//미레?��?��?��?���?????
 			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
 
-			//미레?��?��?��미도
 			"E5N","D5N","C5N","F5N","F5N","E5N","C5N",
 
-			//N?��?��미파?��
 			"N5N","C5N","C5N","E5N","F5N","D5N",
 /////////////////////////////////////////////////////////////////
-			//미레  ?��?��?��?��
 			"E5N","D5N",    "C5N","A5N","A5N","G5N",
-			//미레?��?��?��?���?????
 			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
-			//미레?��?��?��미도 ?��미레
 			"E5N","D5N","C5N","F5N","F5N","E5N","C5N","C5N","E5N","D5N",
-			//미파미레?��
 			"E5N","F5N","E5N","D5N","C5N",
 
 
-			//?��?��?��
 			"0",
 	///////////////////////////////////////////////////////////
 			};
 
 	int verse1_time[] = {
-			//?��?��미도?��?��?��?��?���?????
+			//?��?��미도?��?��?��?��?���???????
 			4,8,8,4,8,8,
 			8,8,8,8,2,
 
@@ -299,7 +284,7 @@ int main(void)
 			//미레?�� ?��?��?��
 			1.5,8,8,4,8,8,4,
 
-			//미레?��?��?��?���?????
+			//미레?��?��?��?���???????
 			8,8,8,8,8,8,4,
 
 			//미레?�� ?��?��미도
@@ -311,7 +296,7 @@ int main(void)
 			//미레?�� ?��?��?��
 			8,8,4,8,8,4,
 
-			//미레?��?��?��?���?????
+			//미레?��?��?��?���???????
 			8,8,8,8,8,8,4,
 
 			//미레?�� ?��?��미도  ?��미레
@@ -351,54 +336,59 @@ int main(void)
 			sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
 					sTime.Hours, sTime.Minutes, sTime.Seconds);
 
-			if (strcmp(Time, Time_AL) == 0) {
-
-				printf("Alarm is playing!!!\r\n");
-				/////////////////////////////////////////////////
-				// LCD up
+			if (strcmp(lcdup, "Park Jung Hwan") != 0) {
 				LCD_Init(LCD_ADDR);
+				strcpy(lcdup, "Park Jung Hwan");
+				// LCD up
 				LCD_SendCommand(LCD_ADDR, 0b10000000);
-				LCD_SendString(LCD_ADDR, "Alarm is playing!!!");
+				LCD_SendString(LCD_ADDR, lcdup);
 
-				int i = 0;
-				int j = 0;
-				int count_time = 0;
-				while (strlen(verse1[i]) == 3) {
-					HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-					HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+				sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
+						sTime.Hours, sTime.Minutes, sTime.Seconds);
 
-					sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
-							sTime.Hours, sTime.Minutes, sTime.Seconds);
-
-					int time = 0;
-					char tempP = verse1[i][0];
-					char tempO = verse1[i][1];
-					char tempT = verse1[i][2];
-						time = verse1_time[count_time];
-						count_time++;
-						note(tempP, tempO, tempT, 2000 / time, 4);
-						i++;
-						if (strlen(verse1[i]) == 1){
-						TIM3->CCR3 = 0;
-						break;
-					}
-
-						// LCD down
-						LCD_SendCommand(LCD_ADDR, 0b11000000);
-						LCD_SendString(LCD_ADDR, Time);
-
-				}
-				/////////////////////////////////////////////////
+				// LCD down
+				LCD_SendCommand(LCD_ADDR, 0b11000000);
+				LCD_SendString(LCD_ADDR, Time);
 			}
 
-			// LCD up
-			LCD_SendCommand(LCD_ADDR, 0b10000000);
-			LCD_SendString(LCD_ADDR, "Park Jung Hwan");
+			sTimestart = sTimecur;
+			sTimecur = sTime.Seconds;
 
-			// LCD down
-			LCD_SendCommand(LCD_ADDR, 0b11000000);
-			LCD_SendString(LCD_ADDR, Time);
+			if (sTimecur != sTimestart) {
+				// LCD down
+				LCD_SendCommand(LCD_ADDR, 0b11000000);
+				LCD_SendString(LCD_ADDR, Time);
+			}
+			////////////////////////////////////////////////////////////////////////////////////////////////////
+			if (strcmp(Time, Time_AL) == 0) {
+				flag_alarm++;
+			}
+			if (flag_alarm > 0) {
 
+				song_time = 2000/verse1_time[count_note];
+
+				if (strlen(verse1[count_note]) == 3 && song_time >= count_bit) {
+
+					int time = 0;
+					char tempP = verse1[count_note][0];
+					char tempO = verse1[count_note][1];
+					char tempT = verse1[count_note][2];
+					note(tempP, tempO, tempT, 2000 / time, 2 + (count_bit));
+
+				} else if (strlen(verse1[count_note]) == 1) {
+					TIM3->CCR3 = 0;
+					count_note = 0;
+					flag_alarm = 0;
+				}
+
+				if (song_time < count_bit) {
+					count_note++;
+					count_bit = 0;
+				}
+
+
+			////////////////////////////////////////////////////////////////////////////////////////////////////
+			}
 			//==========================================================================================================
 			//mode choose while loop
 			while (rising_edge >= 1) {
@@ -419,7 +409,8 @@ int main(void)
 						// LCD up
 						LCD_Init(LCD_ADDR);
 						LCD_SendCommand(LCD_ADDR, 0b10000000);
-						LCD_SendString(LCD_ADDR, "Set Time Mode");
+						strcpy(lcdup, "Set Time Mode");
+						LCD_SendString(LCD_ADDR, lcdup);
 						// LCD down
 						screen(cursor, sTime_temp);
 
@@ -446,7 +437,8 @@ int main(void)
 						LCD_SendCommand(LCD_ADDR, 0b00001111);
 
 						LCD_SendCommand(LCD_ADDR, 0b10000000);
-						LCD_SendString(LCD_ADDR, "Alarm Mode");
+						strcpy(lcdup, "Alarm Mode");
+						LCD_SendString(LCD_ADDR, lcdup);
 						// LCD down
 						screen(cursor, sTime_AL);
 
@@ -1091,9 +1083,6 @@ static void MX_NVIC_Init(void)
   /* TIM2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM2_IRQn);
-  /* TIM3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM3_IRQn);
   /* TIM4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM4_IRQn);
@@ -1181,52 +1170,50 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			get_time_exit++;
 		}
 		get_time++;
+		printf("%d\r\n", get_time);
 	}
 
 	if (htim->Instance == TIM4) {
-		printf("%d\r\n", count2);
-		count2++;
+		count_bit++;
+		flag = 1;
 	}
 
 }
 
 void note(char pitch_text, char octave_text, char temp_text, int time, int volume) {
 
+	if (flag == 1) {
+		int pitch = pitch_change(pitch_text);
+		int octave = octave_change(octave_text);
+		int temp = temp_change(temp_text);
 
-	int pitch = pitch_change(pitch_text);
-	int octave = octave_change(octave_text);
-	int temp = temp_change(temp_text);
+		uint32_t start_tick = 0;
+		uint32_t cur_tick = 0;
+		uint32_t tick_gap = 0;
 
-	uint32_t start_tick = 0;
-	uint32_t cur_tick = 0;
-	uint32_t tick_gap = 0;
+		// avoid error(ARR == CCR)
+		if (volume <= 2) {
+			volume = 2;
+		}
 
-	// 1/1000 is enough to turn off the volume
-	if (pitch == 0) {
-		volume = 2000;
-	}
-
-	// avoid error(ARR == CCR)
-	if (volume <= 2) {
-		volume = 2;
-	}
-
-	// setting the octave
-	if (octave != 4) {
-		if (octave < 4) {
-			for (int i = 0; i < 4 - octave; i++) {
-				pitch *= 2;
-			}
-		} else {
-			for (int i = 0; i < octave - 4; i++) {
-				pitch /= 2;
+		// setting the octave
+		if (octave != 4) {
+			if (octave < 4) {
+				for (int i = 0; i < 4 - octave; i++) {
+					pitch *= 2;
+				}
+			} else {
+				for (int i = 0; i < octave - 4; i++) {
+					pitch /= 2;
+				}
 			}
 		}
+
+		TIM3->ARR = pitch;
+		TIM3->CCR3 = pitch / volume;
+
+		flag = 0;
 	}
-
-	TIM3->ARR = pitch;
-	TIM3->CCR3 = pitch / volume;
-
 }
 uint32_t pitch_change (char pitch_text) {
 	if (pitch_text == 'N') {
