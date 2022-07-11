@@ -32,17 +32,10 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 typedef enum {
-	// APB1 == 90[mhz]
-	// prescaler == 30-1
-	N = 0,
-	C = 11762,
-	D = 10469,
-	E = 9318,
-	F = 8791,
-	G = 7825,
-	A = 6966,
-	B = 6200,
-} _PITCH;
+
+	UP = 1,
+	DOWN = 0,
+} _STROKE;
 
 /* USER CODE END PTD */
 
@@ -59,6 +52,18 @@ typedef enum {
 
 /* USER CODE BEGIN PV */
 
+uint8_t rx;
+uint8_t buf[50], buf_index = 0;
+volatile uint8_t flag_uart;
+
+volatile uint8_t flag_set_handle;
+volatile uint8_t flag_stroke_handle;
+volatile uint8_t flag_peak_handle;
+volatile uint8_t flag_auto;
+
+int num_set = 105;
+int num_stroke = 122;
+int num_peak = 100;
 
 
 /* USER CODE END PV */
@@ -67,10 +72,7 @@ typedef enum {
 void SystemClock_Config(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
-void note(char pitch, char octave, char temp, int time, int volume);
-uint32_t pitch_change (char pitch_text);
-uint32_t octave_change (char octave_text);
-uint32_t temp_change (char temp_text);
+
 
 /* USER CODE END PFP */
 
@@ -121,202 +123,102 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
-
-
-	char *verse1[] = {
-
-	///////////////////////////////////////////////////////////
-			// C도레미 도시
-			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//도시 도레미
-			"C5N", "G4N", "C5N", "D5N", "E5N",
-
-			// 도레미 도시
-			"F3N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//도시도미 파미레도
-			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
-
-			// 도레미 도시
-			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//도시 도레미
-			"C5N", "G4N", "C5N", "D5N", "E5N",
-
-			//N미파미파미도 레N
-			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
-
-			// N도레미 도시
-			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//도시 도레미
-			"C5N", "G4N", "C5N", "D5N", "E5N",
-
-			// 도레미 도시
-			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//도시도미 파미레도
-			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
-
-			// N도레미 도시
-			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			//도시 도파미
-			"C5N", "G4N", "C5N", "F5N", "E5N",
-
-			//N미파미파미도 레N
-			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
-
-			//N레레레레도시도시도
-			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N",
-			//N도미파미레도레
-			"N5N","C5N","E5N","F5N","E5N","D5N","C5N","D5N",
-
-			//NN도레미
-			"N5N","N5N","C5N","D5N","E5N",
-
-			//N레레레레도시도시도레미
-			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N", "D5N", "E5N",
-
-			//N라라라라솔미솔
-			"N4N","A4N","A4N","A4N","A4N","G4N","E4N","G4N",
-
-			//N미레  도라라솔
-			"N5N","E5N","D5N",    "C5N","A5N","A5N","G5N",
-
-			//미레도도도레미
-			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
-
-			//미레도파파미도
-			"E5N","D5N","C5N","F5N","F5N","E5N","C5N",
-
-			//N도도미파레
-			"N5N","C5N","C5N","E5N","F5N","D5N",
-/////////////////////////////////////////////////////////////////
-			//미레  도라라솔
-			"E5N","D5N",    "C5N","A5N","A5N","G5N",
-			//미레도도도레미
-			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
-			//미레도파파미도 도미레
-			"E5N","D5N","C5N","F5N","F5N","E5N","C5N","C5N","E5N","D5N",
-			//미파미레도
-			"E5N","F5N","E5N","D5N","C5N",
-
-
-			//노래끝
-			"0",
-	///////////////////////////////////////////////////////////
-			};
-
-	int verse1_time[] = {
-			//도레미도시도시도레미
-			4,8,8,4,8,8,
-			8,8,8,8,2,
-
-			4,8,8,4,8,8,
-			8,8,8,8,8,8,8,8,
-
-			4,8,8,4,8,8,
-			8,8,8,8,2,
-
-			4,8,8,8,8,8,8,2,2,
-
-			4,8,8,4,8,8,
-			8,8,8,8,2,
-
-			4,8,8,4,8,8,
-			8,8,8,8,8,8,8,8,
-
-			4,8,8,4,8,8,
-			8,8,8,8,2,
-			//미파미파미도레
-			4,8,8,8,8,8,8,2,2,
-
-			4,8,8,8,8,8,8,8,8,4,
-			4,8,8,4,4,8,8,4,
-
-			2,8,8,8,8,
-			4,8,8,8,8,8,8,8,8,8,8,2,
-
-			8,8,8,8,8,8,8,8,
-			//미레도 라라솔
-			1.5,8,8,4,8,8,4,
-
-			//미레도도도레미
-			8,8,8,8,8,8,4,
-
-			//미레도 파파미도
-			8,8,4,8,8,8,8,
-
-			//N도도미파레
-			8,8,4,8,8,4,
-///////////////////////////////////////////////////
-			//미레도 라라솔
-			8,8,4,8,8,4,
-
-			//미레도도도레미
-			8,8,8,8,8,8,4,
-
-			//미레도 파파미도  도미레
-			8,8,4,8,8,8,8,8,8,2,
-
-			//미파미레도
-			8,8,8,8,1
-	};
-
+	HAL_UART_Receive_IT(&huart3, &rx, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+
+
 	while (1) {
 
-
-
-//		int i = 0;
-//		int j = 0;
-//		int count_time = 0;
-//		for (int k = 0; k < 30; k++) {
-//			uint32_t pitch = 0;
-//			uint32_t octave = 0;
-//			int time = 0;
-//			char tempP = verse1[i][0];
-//			char tempO = verse1[i][1];
-//			char tempT = verse1[i][2];
-//			if (verse1[i] != 0) {
-//				time = verse1_time[count_time];
-//				count_time++;
-//				note(tempP, tempO, tempT, 2000/time, 2);
-//				i++;
-//			}
-//			else {
-//				break;
-//			}
+//		if (flag_stroke_handle == UP) {
+//			num_set = 100;
+//			num_stroke = 125;
+//
+//		}
+//		else if (flag_stroke_handle == DOWN) {
+//			num_set = 100;
+//			num_stroke = 100;
 //		}
 
-
-		int i = 0;
-		int j = 0;
-		int count_time = 0;
-		while (strlen(verse1[i]) == 3) {
-			int time = 0;
-			char tempP = verse1[i][0];
-			char tempO = verse1[i][1];
-			char tempT = verse1[i][2];
-				time = verse1_time[count_time];
-				count_time++;
-				note(tempP, tempO, tempT, 2000 / time, 4);
-				i++;
-				if (strlen(verse1[i]) == 1){
-				break;
-			}
+		if (flag_stroke_handle == 1) {
+			num_stroke++;
+			flag_stroke_handle = 2;
 		}
+		else if (flag_stroke_handle == 0){
+			num_stroke--;
+			flag_stroke_handle = 2;
+		}
+		if (flag_set_handle == 1) {
+			num_set++;
+			flag_set_handle = 2;
+		}
+		else if (flag_set_handle == 0){
+			num_set--;
+			flag_set_handle = 2;
+		}
+		if (flag_peak_handle == 1) {
+			num_peak++;
+			flag_peak_handle = 2;
+		}
+		else if (flag_peak_handle == 0){
+			num_peak--;
+			flag_peak_handle = 2;
+		}
+		TIM3->CCR1 = num_peak;
+		TIM3->CCR2 = num_peak;
+		TIM3->CCR3 = num_set;
+		TIM3->CCR4 = num_stroke;
+
+		if (flag_uart == 1) {
+
+			buf[buf_index] = 0;
+			//down stroke
+			if (rx == '1') {
+				num_set = 105;
+				TIM3->CCR3 = num_set;
+				HAL_Delay(50);
+				num_stroke = 125;
+				TIM3->CCR4 = num_stroke;
+				HAL_Delay(450);
+
+				num_set = 102;
+				for(int i = 0; i < 27; i++) {
+					num_stroke--;
+					TIM3->CCR3 = num_set;
+					TIM3->CCR4 = num_stroke;
+					HAL_Delay(1);
+				}
 
 
 
-//	  note('C', '4', 'N', 500, 2); //?��
-//	  note('D', '4', 'N', 500, 4); //?��
-//	  note('E', '4', 'N', 500, 4); //�?
-//	  note('F', '4', 'N', 500, 4); //?��
-//	  note('G', '4', 'N', 500, 4); //?��
-//	  note('A', '4', 'N', 500, 4); //?��
-//	  note('B', '4', 'N', 500, 4); //?��
-//	  note('C', '5', 'N', 1000, 4); //?��
+			}
+			//up stroke
+			else if (rx == '0') {
+				num_set = 105;
+				TIM3->CCR3 = num_set;
+				HAL_Delay(50);
+				num_stroke = 98;
+				TIM3->CCR4 = num_stroke;
+				HAL_Delay(450);
+
+				num_set = 102;
+				for(int i = 0; i < 27; i++) {
+					num_stroke++;
+					TIM3->CCR3 = num_set;
+					TIM3->CCR4 = num_stroke;
+					HAL_Delay(1);
+				}
+			}
+
+
+			memset(buf, 0, sizeof(buf));
+			buf_index = 0;
+			flag_uart = 0;
+		}
+			HAL_Delay(1);
 
 	}
     /* USER CODE END WHILE */
@@ -391,114 +293,37 @@ static void MX_NVIC_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void note(char pitch_text, char octave_text, char temp_text, int time, int volume) {
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart -> Instance == USART3) {
+		HAL_UART_Transmit(&huart3, &rx, 1, 100);
 
-
-	int pitch = pitch_change(pitch_text);
-	int octave = octave_change(octave_text);
-	int temp = temp_change(temp_text);
-
-//	printf("%d %d %d %d %d\n\r", pitch, octave, temp, time, volume);
-
-
-	uint32_t start_tick = 0;
-	uint32_t cur_tick = 0;
-	uint32_t tick_gap = 0;
-
-	// 1/1000 is enough to turn off the volume
-	if (pitch == 0) {
-		volume = 2000;
-	}
-
-	// avoid error(ARR == CCR)
-	if (volume <= 2) {
-		volume = 2;
-	}
-
-	// setting the octave
-	if (octave != 4) {
-		if (octave < 4) {
-			for (int i = 0; i < 4 - octave; i++) {
-				pitch *= 2;
-			}
-		} else {
-			for (int i = 0; i < octave - 4; i++) {
-				pitch /= 2;
-			}
+//		buf[buf_index++] = rx;
+		if (rx == '1' || rx == '0') {
+			flag_uart = 1;
 		}
-	}
-
-	TIM3->ARR = pitch;
-	TIM3->CCR1 = pitch / volume;
-
-	start_tick = HAL_GetTick();
-	tick_gap = 0;
-	while (tick_gap >= 0) {
-		cur_tick = HAL_GetTick();
-		tick_gap = cur_tick - start_tick;
-		TIM3->CCR1 = pitch / volume;
-
-		if (tick_gap >= time) {
-			volume = 2;
-			tick_gap = 0;
-			break;
+		if (rx == 'w' || rx == 'W') {
+			flag_set_handle = 1;
 		}
-		// if printf is not activated this while loop doesnt work correctly
-		printf("%d %d %d %d %d\n\r", pitch, octave, temp, time, volume);
-//		printf("tick_gap : %d\r\n", tick_gap);
-//		printf("\r\n");
-		if (tick_gap % 5 == 0 || tick_gap % 4 == 0 || tick_gap % 3 == 0) {
-			volume += 2;
+		if (rx == 's' || rx == 'S') {
+			flag_set_handle = 0;
 		}
-	}
-}
-uint32_t pitch_change (char pitch_text) {
-	if (pitch_text == 'N') {
-		return N;
-	}
-	else if (pitch_text == 'C') {
-		return C;
-	}
-	else if (pitch_text == 'D') {
-		return D;
-	}
-	else if (pitch_text == 'E') {
-		return E;
-	}
-	else if (pitch_text == 'F') {
-		return F;
-	}
-	else if (pitch_text == 'G') {
-		return G;
-	}
-	else if (pitch_text == 'A') {
-		return A;
-	}
-	else if (pitch_text == 'B') {
-		return B;
-	}
-	else {
-		return N;
-	}
-}
-uint32_t octave_change (char octave_text) {
-	return octave_text - '0';
-}
-uint32_t temp_change (char temp_text) {
-	if (temp_text == 'N') {
-		return 0;
-	}
-	else if (temp_text == 'S') {
-		return 1;
-	}
-	else if (temp_text == 'F') {
-		return -1;
-	}
-	else {
-		return 0;
-	}
-}
+		if (rx == 'a' || rx == 'A') {
+			flag_stroke_handle = 1;
+		}
+		if (rx == 'd' || rx == 'D') {
+			flag_stroke_handle = 0;
+		}
+		if (rx == 'z' || rx == 'Z') {
+			flag_peak_handle = 1;
+		}
+		if (rx == 'x' || rx == 'X') {
+			flag_peak_handle = 0;
+		}
 
+		HAL_UART_Receive_IT(&huart3, &rx, 1);
+	}
+}
 /* USER CODE END 4 */
 
 /**
