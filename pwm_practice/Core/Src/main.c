@@ -60,10 +60,11 @@ volatile uint8_t flag_set_handle;
 volatile uint8_t flag_stroke_handle;
 volatile uint8_t flag_peak_handle;
 volatile uint8_t flag_auto;
+volatile uint8_t count_systick = 0;
 
-int num_set = 105;
-int num_stroke = 122;
-int num_peak = 100;
+volatile uint8_t flag_default_setting = 0;
+
+
 
 
 /* USER CODE END PV */
@@ -120,7 +121,6 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 	HAL_UART_Receive_IT(&huart3, &rx, 1);
@@ -128,85 +128,170 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	int num_set_default = 104;
+	int num_stroke_default = 116;
+	int num_peak_default = 87;
+
+	int num_set = num_set_default;
+	int num_stroke = num_stroke_default;
+	int num_peak = num_peak_default;
+
 
 
 
 	while (1) {
 
-//		if (flag_stroke_handle == UP) {
-//			num_set = 100;
-//			num_stroke = 125;
-//
-//		}
-//		else if (flag_stroke_handle == DOWN) {
-//			num_set = 100;
-//			num_stroke = 100;
-//		}
+/*		//do while 처럼 사용하기
+		if (flag_default_setting == 1) {
+			volatile uint8_t upflag = 0;
+			volatile uint8_t downflag = 0;
+			printf("start default_setting protocol \r\n");
 
-		if (flag_stroke_handle == 1) {
-			num_stroke++;
-			flag_stroke_handle = 2;
+			while (flag_default_setting == 1) {
+				// 같은 버튼으로 여러가지 기능 구현하기 : '1','0'
+				if (rx == '1') {
+					printf("start updefault (downstroke) setting \r\n");
+					upflag = 1;
+				}
+				else if (rx == '0') {
+					printf("start down(default) (upstroke) setting \r\n");
+					downflag = 1;
+				}
+
+				//scanf 구문이 없으므로 while 문으로 구현하고자 한다.
+				//flag_default_setting = 0;
+			}
+		}*/
+
+
+
+		if (count_systick == 1) {
+			if (flag_stroke_handle == 1) {
+				num_stroke++;
+				flag_stroke_handle = 2;
+			}
+			else if (flag_stroke_handle == 0){
+				num_stroke--;
+				flag_stroke_handle = 2;
+			}
+			if (flag_set_handle == 1) {
+				num_set++;
+				flag_set_handle = 2;
+			}
+			else if (flag_set_handle == 0){
+				num_set--;
+				flag_set_handle = 2;
+			}
+			if (flag_peak_handle == 1) {
+				num_peak++;
+				flag_peak_handle = 2;
+			}
+			else if (flag_peak_handle == 0){
+				num_peak--;
+				flag_peak_handle = 2;
+			}
+				TIM3->CCR1 = num_peak;
+				TIM3->CCR3 = num_set;
+				TIM3->CCR4 = num_stroke;
+
+			count_systick = 0;
 		}
-		else if (flag_stroke_handle == 0){
-			num_stroke--;
-			flag_stroke_handle = 2;
-		}
-		if (flag_set_handle == 1) {
-			num_set++;
-			flag_set_handle = 2;
-		}
-		else if (flag_set_handle == 0){
-			num_set--;
-			flag_set_handle = 2;
-		}
-		if (flag_peak_handle == 1) {
-			num_peak++;
-			flag_peak_handle = 2;
-		}
-		else if (flag_peak_handle == 0){
-			num_peak--;
-			flag_peak_handle = 2;
-		}
-		TIM3->CCR1 = num_peak;
-		TIM3->CCR2 = num_peak;
-		TIM3->CCR3 = num_set;
-		TIM3->CCR4 = num_stroke;
+
+
+
 
 		if (flag_uart == 1) {
 
 			buf[buf_index] = 0;
 			//down stroke
-			if (rx == '1') {
+			if (rx == '0') {
 				num_set = 105;
+				num_peak = 86;
 				TIM3->CCR3 = num_set;
-				HAL_Delay(50);
-				num_stroke = 125;
+				TIM3->CCR1 = num_peak;
+				HAL_Delay(10);
+				num_stroke = 115;
 				TIM3->CCR4 = num_stroke;
 				HAL_Delay(450);
 
-				num_set = 102;
 				for(int i = 0; i < 27; i++) {
 					num_stroke--;
+					num_set = 100;
 					TIM3->CCR3 = num_set;
 					TIM3->CCR4 = num_stroke;
 					HAL_Delay(1);
 				}
-
-
-
 			}
 			//up stroke
-			else if (rx == '0') {
+			else if (rx == '1') {
 				num_set = 105;
 				TIM3->CCR3 = num_set;
+				num_peak = 58;
+				TIM3->CCR1 = num_peak;
+				HAL_Delay(10);
+				num_stroke = 98;
+				TIM3->CCR4 = num_stroke;
+				HAL_Delay(450);
+
+				for(int i = 0; i < 27; i++) {
+					num_stroke++;
+					num_set = 99;
+					TIM3->CCR3 = num_set;
+					TIM3->CCR4 = num_stroke;
+					HAL_Delay(1);
+				}
+			}
+
+			//up down
+			else if (rx == '2') {
+				num_set = 105;
+				TIM3->CCR3 = num_set;
+				num_peak = 58;
+				TIM3->CCR1 = num_peak;
 				HAL_Delay(50);
 				num_stroke = 98;
 				TIM3->CCR4 = num_stroke;
 				HAL_Delay(450);
 
-				num_set = 102;
 				for(int i = 0; i < 27; i++) {
 					num_stroke++;
+					num_set = 98;
+					TIM3->CCR3 = num_set;
+					TIM3->CCR4 = num_stroke;
+					HAL_Delay(1);
+				}
+				HAL_Delay(100);
+				for(int i = 0; i < 27; i++) {
+					num_stroke--;
+					num_set = 101;
+					TIM3->CCR3 = num_set;
+					TIM3->CCR4 = num_stroke;
+					HAL_Delay(1);
+				}
+			}
+
+			//down up
+			else if (rx == '3') {
+				num_set = 105;
+				TIM3->CCR3 = num_set;
+				num_peak = 58;
+				TIM3->CCR1 = num_peak;
+				HAL_Delay(50);
+				num_stroke = 98;
+				TIM3->CCR4 = num_stroke;
+				HAL_Delay(450);
+
+				for(int i = 0; i < 27; i++) {
+					num_stroke--;
+					num_set = 101;
+					TIM3->CCR3 = num_set;
+					TIM3->CCR4 = num_stroke;
+					HAL_Delay(1);
+				}
+				HAL_Delay(100);
+				for(int i = 0; i < 27; i++) {
+					num_stroke++;
+					num_set = 99;
 					TIM3->CCR3 = num_set;
 					TIM3->CCR4 = num_stroke;
 					HAL_Delay(1);
@@ -299,7 +384,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		HAL_UART_Transmit(&huart3, &rx, 1, 100);
 
 //		buf[buf_index++] = rx;
-		if (rx == '1' || rx == '0') {
+		if (rx == '0' || rx == '1'|| rx == '2'|| rx == '3') {
 			flag_uart = 1;
 		}
 		if (rx == 'w' || rx == 'W') {
@@ -320,9 +405,19 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if (rx == 'x' || rx == 'X') {
 			flag_peak_handle = 0;
 		}
-
+		if (rx == 'o') {
+			flag_default_setting = 1;
+		}
+		rx = 0;
 		HAL_UART_Receive_IT(&huart3, &rx, 1);
 	}
+}
+void HAL_SYSTICK_Callback(void)
+{
+
+	count_systick = 1;
+//	printf("%d\r\n", count_systick);
+
 }
 /* USER CODE END 4 */
 
