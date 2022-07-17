@@ -52,17 +52,29 @@ typedef enum {
 
 /* USER CODE BEGIN PV */
 
+// count 1ms interrupt
+volatile uint32_t count_systick = 0;
+
+//=============uart value===========================
 uint8_t rx;
-uint8_t buf[50], buf_index = 0;
-volatile uint8_t flag_uart;
+uint8_t buf[10], buf_index = 0;
+uint8_t buf_temp[10];
+//=============uart value===========================
 
+//=============== setting value =====================
+volatile uint8_t flag_default_setting;
+volatile uint8_t flag_up_apply;
+volatile uint8_t flag_down_apply;
 volatile uint8_t flag_set_handle;
-volatile uint8_t flag_stroke_handle;
+volatile uint8_t flag_swing_handle;
 volatile uint8_t flag_peak_handle;
-volatile uint8_t flag_auto;
-volatile uint8_t count_systick = 0;
+//=============== setting value =====================
 
-volatile uint8_t flag_default_setting = 0;
+//============== auto_swing value ========================
+volatile uint8_t flag_swing_mode;
+volatile uint8_t flag_swing_auto;
+
+//============== auto_swing value ========================
 
 
 
@@ -98,7 +110,8 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+
+	HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -128,183 +141,156 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	int num_set_default = 104;
-	int num_stroke_default = 116;
-	int num_peak_default = 87;
 
-	int num_set = num_set_default;
-	int num_stroke = num_stroke_default;
-	int num_peak = num_peak_default;
+	int num_set_up_yes = 102;
+	int num_set_up_no = 104;
+	int num_swing_up_no = 116;
+	int num_peak_up_no = 87;
 
 
+	int num_set_down_no = num_set_up_no;
+	int num_swing_down = num_swing_up;
+	int num_peak_down = num_peak_up;
 
+	int num_set = num_set_up_no;
+	int num_swing = num_swing_up;
+	int num_peak = num_peak_up;
+
+	TIM3->CCR3 = num_set;
+	TIM3->CCR4 = num_swing;
+	TIM3->CCR1 = num_peak;
 
 	while (1) {
 
-/*		//do while 처럼 사용하기
+
+		// set the default setting
 		if (flag_default_setting == 1) {
-			volatile uint8_t upflag = 0;
-			volatile uint8_t downflag = 0;
-			printf("start default_setting protocol \r\n");
+			printf("\r\n세팅모드에 진입합니다.\r\n");
+			flag_default_setting = 2;
+		}
+		while (flag_default_setting == 2) {
 
-			while (flag_default_setting == 1) {
-				// 같은 버튼으로 여러가지 기능 구현하기 : '1','0'
-				if (rx == '1') {
-					printf("start updefault (downstroke) setting \r\n");
-					upflag = 1;
+			//no stroke setting
+			if (flag_up_apply == 1) {
+				num_set_up_no = num_set;
+				num_swing_up = num_swing;
+				num_peak_up = num_peak;
+				printf("\r\n");
+				printf("num_set_up_no : %d\r\n", num_set_up_no);
+				printf("num_swing_up : %d\r\n", num_swing_up);
+				printf("num_peak_up : %d\r\n", num_peak_up);
+				flag_up_apply = 0;
+			}
+			if (flag_down_apply == 1) {
+				if (num_set_down_no   == num_set_up_no   &&
+					num_swing_down == num_swing_up &&
+					num_peak_down  == num_peak_up) {
+
+					num_set_down_no = 104;
+					num_swing_down = 116 - 27;
+					num_peak_down = 58;
+
 				}
-				else if (rx == '0') {
-					printf("start down(default) (upstroke) setting \r\n");
-					downflag = 1;
+				else {
+					num_set_down_no = num_set;
+					num_swing_down = num_swing;
+					num_peak_down = num_peak;
 				}
 
-				//scanf 구문이 없으므로 while 문으로 구현하고자 한다.
-				//flag_default_setting = 0;
+				printf("\r\n");
+				printf("num_set_down : %d\r\n", num_set_down_no);
+				printf("num_swing_down : %d\r\n", num_swing_down);
+				printf("num_peak_down : %d\r\n", num_peak_down);
+				flag_down_apply = 0;
 			}
-		}*/
+
+			// yes stroke setting
+			if (flag_up_apply == 2) {
+				num_set_up_yes = num_set;
+				printf("\r\n");
+				printf("num_set_up_yes : %d\r\n", num_set_up_yes);
+				flag_up_apply = 0;
+			}
+			if (flag_down_apply == 2) {
+				num_set_down_yes = num_set;
+				printf("\r\n");
+				printf("num_set_down_yes : %d\r\n", num_set_down_yes);
+				flag_down_apply = 0;
+			}
 
 
+				// set up & down
+				if (flag_set_handle == 1) {
+					num_set++;
+					flag_set_handle = 0;
+					printf("num_set : %d\r\n", num_set);
+				} else if (flag_set_handle == 2) {
+					num_set--;
+					flag_set_handle = 0;
+					printf("num_set : %d\r\n", num_set);
+				}
 
-		if (count_systick == 1) {
-			if (flag_stroke_handle == 1) {
-				num_stroke++;
-				flag_stroke_handle = 2;
-			}
-			else if (flag_stroke_handle == 0){
-				num_stroke--;
-				flag_stroke_handle = 2;
-			}
-			if (flag_set_handle == 1) {
-				num_set++;
-				flag_set_handle = 2;
-			}
-			else if (flag_set_handle == 0){
-				num_set--;
-				flag_set_handle = 2;
-			}
-			if (flag_peak_handle == 1) {
-				num_peak++;
-				flag_peak_handle = 2;
-			}
-			else if (flag_peak_handle == 0){
-				num_peak--;
-				flag_peak_handle = 2;
-			}
-				TIM3->CCR1 = num_peak;
+				// swing up & down
+				if (flag_swing_handle == 1) {
+					num_swing++;
+					flag_swing_handle = 0;
+					printf("num_swing : %d\r\n", num_swing);
+				} else if (flag_swing_handle == 2) {
+					num_swing--;
+					flag_swing_handle = 0;
+					printf("num_swing : %d\r\n", num_swing);
+				}
+
+				// peak up & down
+				if (flag_peak_handle == 1) {
+					num_peak++;
+					flag_peak_handle = 0;
+					printf("num_peak : %d\r\n", num_peak);
+				} else if (flag_peak_handle == 2) {
+					num_peak--;
+					flag_peak_handle = 0;
+					printf("num_peak : %d\r\n", num_peak);
+				}
+
+
+			if (count_systick % 100 == 0) {
 				TIM3->CCR3 = num_set;
-				TIM3->CCR4 = num_stroke;
+				TIM3->CCR4 = num_swing;
+				TIM3->CCR1 = num_peak;
+			}
 
-			count_systick = 0;
+			if (flag_default_setting == 0) {
+				printf("\r\n세팅모드를 종료합니다.\r\n");
+			}
 		}
 
 
 
-
-		if (flag_uart == 1) {
-
-			buf[buf_index] = 0;
-			//down stroke
-			if (rx == '0') {
-				num_set = 105;
-				num_peak = 86;
-				TIM3->CCR3 = num_set;
-				TIM3->CCR1 = num_peak;
-				HAL_Delay(10);
-				num_stroke = 115;
-				TIM3->CCR4 = num_stroke;
-				HAL_Delay(450);
-
-				for(int i = 0; i < 27; i++) {
-					num_stroke--;
-					num_set = 100;
-					TIM3->CCR3 = num_set;
-					TIM3->CCR4 = num_stroke;
-					HAL_Delay(1);
-				}
-			}
-			//up stroke
-			else if (rx == '1') {
-				num_set = 105;
-				TIM3->CCR3 = num_set;
-				num_peak = 58;
-				TIM3->CCR1 = num_peak;
-				HAL_Delay(10);
-				num_stroke = 98;
-				TIM3->CCR4 = num_stroke;
-				HAL_Delay(450);
-
-				for(int i = 0; i < 27; i++) {
-					num_stroke++;
-					num_set = 99;
-					TIM3->CCR3 = num_set;
-					TIM3->CCR4 = num_stroke;
-					HAL_Delay(1);
-				}
-			}
-
-			//up down
-			else if (rx == '2') {
-				num_set = 105;
-				TIM3->CCR3 = num_set;
-				num_peak = 58;
-				TIM3->CCR1 = num_peak;
-				HAL_Delay(50);
-				num_stroke = 98;
-				TIM3->CCR4 = num_stroke;
-				HAL_Delay(450);
-
-				for(int i = 0; i < 27; i++) {
-					num_stroke++;
-					num_set = 98;
-					TIM3->CCR3 = num_set;
-					TIM3->CCR4 = num_stroke;
-					HAL_Delay(1);
-				}
-				HAL_Delay(100);
-				for(int i = 0; i < 27; i++) {
-					num_stroke--;
-					num_set = 101;
-					TIM3->CCR3 = num_set;
-					TIM3->CCR4 = num_stroke;
-					HAL_Delay(1);
-				}
-			}
-
-			//down up
-			else if (rx == '3') {
-				num_set = 105;
-				TIM3->CCR3 = num_set;
-				num_peak = 58;
-				TIM3->CCR1 = num_peak;
-				HAL_Delay(50);
-				num_stroke = 98;
-				TIM3->CCR4 = num_stroke;
-				HAL_Delay(450);
-
-				for(int i = 0; i < 27; i++) {
-					num_stroke--;
-					num_set = 101;
-					TIM3->CCR3 = num_set;
-					TIM3->CCR4 = num_stroke;
-					HAL_Delay(1);
-				}
-				HAL_Delay(100);
-				for(int i = 0; i < 27; i++) {
-					num_stroke++;
-					num_set = 99;
-					TIM3->CCR3 = num_set;
-					TIM3->CCR4 = num_stroke;
-					HAL_Delay(1);
-				}
-			}
-
-
-			memset(buf, 0, sizeof(buf));
-			buf_index = 0;
-			flag_uart = 0;
+		if (flag_swing_mode == 1) {
+			printf("\r\n스윙모드에 진입합니다.\r\n");
+			flag_swing_mode = 2;
 		}
-			HAL_Delay(1);
+		// swing mode
+		while (flag_swing_mode == 2) {
 
+			//down swing(up -> down)
+			if (flag_swing_auto == 1) {
+				TIM3->CCR3 = num_set_up_no;
+				TIM3->CCR4 = num_swing_up;
+				TIM3->CCR1 = num_peak_up;
+				flag_swing_auto = 0;
+			}
+			//up swing (down -> up)
+			else if (flag_swing_auto == 2) {
+				TIM3->CCR3 = num_set_down_no;
+				TIM3->CCR4 = num_swing_down;
+				TIM3->CCR1 = num_peak_down;
+				flag_swing_auto = 0;
+			}
+			if (flag_swing_mode == 0) {
+				printf("\r\n스윙모드를 종료합니다.\r\n");
+			}
+		}
 	}
     /* USER CODE END WHILE */
 
@@ -383,41 +369,86 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if(huart -> Instance == USART3) {
 		HAL_UART_Transmit(&huart3, &rx, 1, 100);
 
-//		buf[buf_index++] = rx;
-		if (rx == '0' || rx == '1'|| rx == '2'|| rx == '3') {
-			flag_uart = 1;
+		if (rx == '\n') {
+			buf[buf_index] = 0;
+			if (buf[0] == '`') {
+				flag_default_setting = 1;
+			}
+			if (buf[0] == '~') {
+				flag_swing_mode = 1;
+			}
+
+
+			if (flag_default_setting == 2) {
+				/*
+				volatile uint8_t flag_up_apply;
+				volatile uint8_t flag_down_apply;
+				volatile uint8_t flag_set_handle;
+				volatile uint8_t flag_swing_handle;
+				volatile uint8_t flag_peak_handle;
+				*/
+				if (buf[0] == 'o' || buf[0] == 'O') {
+					flag_up_apply = 1;
+				}
+				if (buf[0] == 'p' || buf[0] == 'P') {
+					flag_down_apply = 1;
+				}
+				if (buf[0] == 'k' || buf[0] == 'K') {
+					flag_up_apply = 2;
+				}
+				if (buf[0] == 'l' || buf[0] == 'l') {
+					flag_down_apply = 2;
+				}
+
+				if (buf[0] == 'w' || buf[0] == 'W') {
+					flag_set_handle = 1;
+				}
+				if (buf[0] == 's' || buf[0] == 'S') {
+					flag_set_handle = 2;
+				}
+
+				if (buf[0] == 'a' || buf[0] == 'A') {
+					flag_swing_handle = 1;
+				}
+				if (buf[0] == 'd' || buf[0] == 'D') {
+					flag_swing_handle = 2;
+				}
+
+				if (buf[0] == 'q' || buf[0] == 'Q') {
+					flag_peak_handle = 1;
+				}
+				if (buf[0] == 'e' || buf[0] == 'E') {
+					flag_peak_handle = 2;
+				}
+				if (buf[0] == 'x' || buf[0] == 'X') {
+					flag_default_setting = 0;
+				}
+			}
+
+			if (flag_swing_mode == 2) {
+				if (buf[0] == 'w' || buf[0] == 'W' || buf[0] == '1') {
+					flag_swing_auto = 1;
+				}
+				if (buf[0] == 's' || buf[0] == 'S' || buf[0] == '0') {
+					flag_swing_auto = 2;
+				}
+				if (buf[0] == 'x' || buf[0] == 'X') {
+					flag_swing_mode = 0;
+				}
+			}
+
+			memset(buf, 0, sizeof(buf));
+			buf_index = 0;
 		}
-		if (rx == 'w' || rx == 'W') {
-			flag_set_handle = 1;
+		else {
+			buf[buf_index++] = rx;
 		}
-		if (rx == 's' || rx == 'S') {
-			flag_set_handle = 0;
-		}
-		if (rx == 'a' || rx == 'A') {
-			flag_stroke_handle = 1;
-		}
-		if (rx == 'd' || rx == 'D') {
-			flag_stroke_handle = 0;
-		}
-		if (rx == 'z' || rx == 'Z') {
-			flag_peak_handle = 1;
-		}
-		if (rx == 'x' || rx == 'X') {
-			flag_peak_handle = 0;
-		}
-		if (rx == 'o') {
-			flag_default_setting = 1;
-		}
-		rx = 0;
 		HAL_UART_Receive_IT(&huart3, &rx, 1);
 	}
 }
 void HAL_SYSTICK_Callback(void)
 {
-
-	count_systick = 1;
-//	printf("%d\r\n", count_systick);
-
+	count_systick++;
 }
 /* USER CODE END 4 */
 
