@@ -53,7 +53,17 @@ typedef enum {
 /* USER CODE BEGIN PV */
 
 // count 1ms interrupt
-volatile uint32_t count_systick = 0;
+
+//=============syscallback value==================
+volatile uint32_t count_systick;
+volatile uint8_t count_systick_1ms;
+volatile uint8_t count_systick_2ms;
+volatile uint8_t count_systick_5ms;
+volatile uint8_t count_systick_10ms;
+volatile uint8_t count_systick_100ms;
+volatile uint8_t count_systick_1000ms;
+
+//=============syscallback value==================
 
 //=============uart value===========================
 uint8_t rx;
@@ -73,9 +83,25 @@ volatile uint8_t flag_peak_handle;
 //============== auto_swing value ========================
 volatile uint8_t flag_swing_mode;
 volatile uint8_t flag_swing_auto;
-
+uint32_t num_swing_up_temp;
+uint32_t num_swing_down_temp;
 //============== auto_swing value ========================
 
+//================swing value===============================
+int num_set_up_yes = 100;
+int num_set_up_no = 104;
+int num_swing_up_no = 116;
+int num_peak_up_no = 87;
+
+int num_set_down_yes = 100;
+int num_set_down_no = num_set_up_no;
+int num_swing_down = num_swing_up;
+int num_peak_down = num_peak_up;
+
+int num_set = num_set_up_no;
+int num_swing = num_swing_up;
+int num_peak = num_peak_up;
+//================swing value===============================
 
 
 
@@ -137,32 +163,18 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 	HAL_UART_Receive_IT(&huart3, &rx, 1);
+	TIM3->CCR3 = num_set;
+	TIM3->CCR4 = num_swing;
+	TIM3->CCR1 = num_peak;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	int num_set_up_yes = 102;
-	int num_set_up_no = 104;
-	int num_swing_up_no = 116;
-	int num_peak_up_no = 87;
-
-
-	int num_set_down_no = num_set_up_no;
-	int num_swing_down = num_swing_up;
-	int num_peak_down = num_peak_up;
-
-	int num_set = num_set_up_no;
-	int num_swing = num_swing_up;
-	int num_peak = num_peak_up;
-
-	TIM3->CCR3 = num_set;
-	TIM3->CCR4 = num_swing;
-	TIM3->CCR1 = num_peak;
-
 	while (1) {
 
 
+		// ========================================Setting mode===========================
 		// set the default setting
 		if (flag_default_setting == 1) {
 			printf("\r\n세팅모드에 진입합니다.\r\n");
@@ -252,7 +264,7 @@ int main(void)
 					printf("num_peak : %d\r\n", num_peak);
 				}
 
-
+			// user can see immediately the status of the machine
 			if (count_systick % 100 == 0) {
 				TIM3->CCR3 = num_set;
 				TIM3->CCR4 = num_swing;
@@ -263,34 +275,65 @@ int main(void)
 				printf("\r\n세팅모드를 종료합니다.\r\n");
 			}
 		}
+		// ========================================Setting mode===========================
 
 
-
+		// ========================================swing mode===========================
+		// this struct is maded for user can know the swing mode begin
+		// 'num_swing' control everything in this Algorithm
 		if (flag_swing_mode == 1) {
-			printf("\r\n스윙모드에 진입합니다.\r\n");
 			flag_swing_mode = 2;
+			printf("\r\n스윙모드에 진입합니다.\r\n");
+
+			num_swing = num_swing_up;
+			TIM3->CCR4 = num_swing;
+			TIM3->CCR3 = num_set;
+			TIM3->CCR1 = num_peak;
 		}
-		// swing mode
+
 		while (flag_swing_mode == 2) {
 
+			// Read the set and peak pos and automatically change the pos by swing pos
+			if (flag_swing_auto == 0) {
+				if (num_swing >= num_swing_up) {
+					TIM3->CCR3 = num_set_up_no;
+					TIM3->CCR1 = num_peak_up;
+				}
+				else if (num_swing <= num_swing_down) {
+					TIM3->CCR3 = num_set_down_no;
+					TIM3->CCR1 = num_peak_down;
+				}
+			}
+
+			// do swing
 			//down swing(up -> down)
 			if (flag_swing_auto == 1) {
-				TIM3->CCR3 = num_set_up_no;
-				TIM3->CCR4 = num_swing_up;
-				TIM3->CCR1 = num_peak_up;
+				TIM3->CCR3 = num_set_up_yes;
+				if (count_systick_1ms == 1) {
+					num_swing--;
+					TIM3->CCR4 = num_swing;
+					count_systick_1ms = 0;
+				}
+
 				flag_swing_auto = 0;
 			}
+
 			//up swing (down -> up)
 			else if (flag_swing_auto == 2) {
-				TIM3->CCR3 = num_set_down_no;
-				TIM3->CCR4 = num_swing_down;
-				TIM3->CCR1 = num_peak_down;
+				TIM3->CCR3 = num_set_down_yes;
+				if (count_systick_1ms == 1) {
+					num_swing++;
+					TIM3->CCR4 = num_swing;
+					count_systick_1ms = 0;
+				}
 				flag_swing_auto = 0;
 			}
 			if (flag_swing_mode == 0) {
 				printf("\r\n스윙모드를 종료합니다.\r\n");
 			}
 		}
+		// ========================================swing mode===========================
+
 	}
     /* USER CODE END WHILE */
 
@@ -446,9 +489,32 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		HAL_UART_Receive_IT(&huart3, &rx, 1);
 	}
 }
-void HAL_SYSTICK_Callback(void)
-{
+void HAL_SYSTICK_Callback(void) {
+	/*	volatile uint8_t count_systick_1ms;
+	 volatile uint8_t count_systick_2ms;
+	 volatile uint8_t count_systick_5ms;
+	 volatile uint8_t count_systick_10ms;
+	 volatile uint8_t count_systick_100ms;
+	 volatile uint8_t count_systick_1000ms;*/
+
 	count_systick++;
+	count_systick_1ms = 1;
+	if (count_systick % 2 == 0) {
+		count_systick_2ms = 1;
+	}
+	if (count_systick % 5 == 0) {
+		count_systick_5ms = 1;
+	}
+	if (count_systick % 10 == 0) {
+		count_systick_10ms = 1;
+	}
+	if (count_systick % 100 == 0) {
+		count_systick_100ms = 1;
+	}
+	if (count_systick % 1000 == 0) {
+		count_systick_1000ms = 1;
+	}
+
 }
 /* USER CODE END 4 */
 
