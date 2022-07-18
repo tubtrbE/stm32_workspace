@@ -56,6 +56,7 @@ typedef enum {
 
 //=============syscallback value==================
 volatile uint32_t count_systick;
+volatile uint32_t count_systick_auto;
 volatile uint8_t count_systick_1ms;
 volatile uint8_t count_systick_2ms;
 volatile uint8_t count_systick_5ms;
@@ -83,26 +84,28 @@ volatile uint8_t flag_peak_handle;
 //============== auto_swing value ========================
 volatile uint8_t flag_swing_mode;
 volatile uint8_t flag_swing_auto;
-uint32_t num_swing_up_temp;
-uint32_t num_swing_down_temp;
+uint32_t count_swing_trig;
+uint32_t count_practice;
 //============== auto_swing value ========================
 
 //================swing value===============================
-int num_set_up_yes = 100;
-int num_set_up_no = 104;
-int num_swing_up_no = 116;
-int num_peak_up_no = 87;
+int num_set_up_yes = 104;
+int num_set_up_no = 108;
+int num_swing_up = 120;
+int num_peak_up = 100;
 
-int num_set_down_yes = 100;
-int num_set_down_no = num_set_up_no;
-int num_swing_down = num_swing_up;
-int num_peak_down = num_peak_up;
+int num_set_down_yes = 105;
+int num_set_down_no = 108;
+int num_swing_down = 120-32;
+int num_peak_down = 100-30;
 
-int num_set = num_set_up_no;
-int num_swing = num_swing_up;
-int num_peak = num_peak_up;
+int num_set = 108;
+int num_swing = 120;
+int num_peak = 87;
 //================swing value===============================
 
+uint8_t swing_practice[10] = {1,4};
+uint16_t swing_practice_time[10] = {500};
 
 
 /* USER CODE END PV */
@@ -124,7 +127,7 @@ int __io_putchar(int ch) {
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
+  * @brief  The application entr+y point.
   * @retval int
   */
 int main(void)
@@ -173,7 +176,6 @@ int main(void)
 
 	while (1) {
 
-
 		// ========================================Setting mode===========================
 		// set the default setting
 		if (flag_default_setting == 1) {
@@ -198,9 +200,9 @@ int main(void)
 					num_swing_down == num_swing_up &&
 					num_peak_down  == num_peak_up) {
 
-					num_set_down_no = 104;
-					num_swing_down = 116 - 27;
-					num_peak_down = 58;
+					num_set_down_no = 108;
+					num_swing_down = 120 - 32;
+					num_peak_down = 100 - 30;
 
 				}
 				else {
@@ -229,7 +231,6 @@ int main(void)
 				printf("num_set_down_yes : %d\r\n", num_set_down_yes);
 				flag_down_apply = 0;
 			}
-
 
 				// set up & down
 				if (flag_set_handle == 1) {
@@ -265,10 +266,11 @@ int main(void)
 				}
 
 			// user can see immediately the status of the machine
-			if (count_systick % 100 == 0) {
+			if (count_systick_100ms == 1) {
 				TIM3->CCR3 = num_set;
 				TIM3->CCR4 = num_swing;
 				TIM3->CCR1 = num_peak;
+				count_systick_100ms = 0;
 			}
 
 			if (flag_default_setting == 0) {
@@ -278,7 +280,7 @@ int main(void)
 		// ========================================Setting mode===========================
 
 
-		// ========================================swing mode===========================
+		// ========================================Swing mode===========================
 		// this struct is maded for user can know the swing mode begin
 		// 'num_swing' control everything in this Algorithm
 		if (flag_swing_mode == 1) {
@@ -298,48 +300,128 @@ int main(void)
 				if (num_swing >= num_swing_up) {
 					TIM3->CCR3 = num_set_up_no;
 					TIM3->CCR1 = num_peak_up;
-				}
-				else if (num_swing <= num_swing_down) {
+				} else if (num_swing <= num_swing_down) {
 					TIM3->CCR3 = num_set_down_no;
 					TIM3->CCR1 = num_peak_down;
 				}
 			}
+			// read swing ary----------------------------------------------------------------
+			flag_swing_auto = swing_practice[count_swing_trig];
+
+			if (swing_practice_time[0] == count_practice) {
+				if (count_swing_trig == 0) {
+					count_swing_trig = 1;
+				}
+				else {
+					count_swing_trig = 0;
+				}
+
+			}
+
+			if (swing_practice_time[0] <= count_practice) {
+				count_practice = 0;
+			}
+			// read swing ary----------------------------------------------------------------
+
+
+
 
 			// do swing
-			//down swing(up -> down)
+			// YES down swing(up -> down)
 			if (flag_swing_auto == 1) {
 				TIM3->CCR3 = num_set_up_yes;
-				if (count_systick_1ms == 1) {
-					num_swing--;
-					TIM3->CCR4 = num_swing;
-					count_systick_1ms = 0;
+
+				if (count_systick_auto % 1000 > 125) {
+					if (count_systick_2ms == 1 && num_swing > num_swing_down) {
+
+						num_swing--;
+						TIM3->CCR4 = num_swing;
+						count_systick_2ms = 0;
+					}
 				}
 
-				flag_swing_auto = 0;
+				if (count_systick_auto % 1000 > 250) {
+					flag_swing_auto = 0;
+					count_systick_auto = 0;
+				}
 			}
 
-			//up swing (down -> up)
+			// YES up swing (down -> up)
 			else if (flag_swing_auto == 2) {
 				TIM3->CCR3 = num_set_down_yes;
-				if (count_systick_1ms == 1) {
-					num_swing++;
-					TIM3->CCR4 = num_swing;
-					count_systick_1ms = 0;
+
+				if (count_systick_auto % 1000 > 125) {
+					if (count_systick_2ms == 1 && num_swing < num_swing_up) {
+
+						num_swing++;
+						TIM3->CCR4 = num_swing;
+						count_systick_2ms = 0;
+					}
 				}
-				flag_swing_auto = 0;
+
+				if (count_systick_auto % 1000 > 250) {
+					flag_swing_auto = 0;
+					count_systick_auto = 0;
+				}
 			}
+
+			// NO down swing(up -> down)
+			if (flag_swing_auto == 3) {
+				TIM3->CCR3 = num_set_up_no;
+				if (count_systick_auto % 1000 > 125) {
+					if (count_systick_2ms == 1 && num_swing > num_swing_down) {
+
+						num_swing--;
+						TIM3->CCR4 = num_swing;
+						count_systick_2ms = 0;
+					}
+				}
+				if (count_systick_auto % 1000 > 250) {
+					flag_swing_auto = 0;
+					count_systick_auto = 0;
+				}
+			}
+
+			// NO up swing (down -> up)
+			else if (flag_swing_auto == 4) {
+				TIM3->CCR3 = num_set_down_no;
+				if (count_systick_auto % 1000 > 125) {
+					if (count_systick_2ms == 1 && num_swing < num_swing_up) {
+
+						num_swing++;
+						TIM3->CCR4 = num_swing;
+						count_systick_2ms = 0;
+					}
+				}
+				if (count_systick_auto % 1000 > 250) {
+					flag_swing_auto = 0;
+					count_systick_auto = 0;
+				}
+			}
+
+
+
+
 			if (flag_swing_mode == 0) {
 				printf("\r\n스윙모드를 종료합니다.\r\n");
 			}
 		}
-		// ========================================swing mode===========================
+		// ========================================Swing mode===========================
 
 	}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	num_set_up_no = 108;
+	num_swing_up = 120;
+	num_peak_up = 87;
+
+	TIM3->CCR3 = num_set_up_no;
+	TIM3->CCR4 = num_swing_up;
+	TIM3->CCR1 = num_peak_up;
   /* USER CODE END 3 */
 }
+
 
 /**
   * @brief System Clock Configuration
@@ -430,12 +512,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 				volatile uint8_t flag_swing_handle;
 				volatile uint8_t flag_peak_handle;
 				*/
+
+				//no setting
 				if (buf[0] == 'o' || buf[0] == 'O') {
 					flag_up_apply = 1;
 				}
 				if (buf[0] == 'p' || buf[0] == 'P') {
 					flag_down_apply = 1;
 				}
+
+				//yes setting
 				if (buf[0] == 'k' || buf[0] == 'K') {
 					flag_up_apply = 2;
 				}
@@ -443,6 +529,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 					flag_down_apply = 2;
 				}
 
+
+				// set pos
 				if (buf[0] == 'w' || buf[0] == 'W') {
 					flag_set_handle = 1;
 				}
@@ -450,6 +538,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 					flag_set_handle = 2;
 				}
 
+
+				// swing pos
 				if (buf[0] == 'a' || buf[0] == 'A') {
 					flag_swing_handle = 1;
 				}
@@ -457,24 +547,47 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 					flag_swing_handle = 2;
 				}
 
+				//peak pos
 				if (buf[0] == 'q' || buf[0] == 'Q') {
 					flag_peak_handle = 1;
 				}
 				if (buf[0] == 'e' || buf[0] == 'E') {
 					flag_peak_handle = 2;
 				}
+
+				// end setting
 				if (buf[0] == 'x' || buf[0] == 'X') {
 					flag_default_setting = 0;
 				}
 			}
 
+			//swing handle
 			if (flag_swing_mode == 2) {
-				if (buf[0] == 'w' || buf[0] == 'W' || buf[0] == '1') {
+
+
+				// yes swing
+				if (buf[0] == '0') {
 					flag_swing_auto = 1;
 				}
-				if (buf[0] == 's' || buf[0] == 'S' || buf[0] == '0') {
+				if (buf[0] == '1') {
 					flag_swing_auto = 2;
 				}
+
+
+				// no swing
+				if (buf[0] == '2') {
+					flag_swing_auto = 3;
+				}
+				if (buf[0] == '3') {
+					flag_swing_auto = 4;
+				}
+
+				// start auto stroke swing ary
+				if (buf[0] == '4') {
+					flag_swing_auto = 5;
+				}
+
+				//end swing handle
 				if (buf[0] == 'x' || buf[0] == 'X') {
 					flag_swing_mode = 0;
 				}
@@ -513,6 +626,31 @@ void HAL_SYSTICK_Callback(void) {
 	}
 	if (count_systick % 1000 == 0) {
 		count_systick_1000ms = 1;
+	}
+
+
+	//yes swing out flag
+	if (flag_swing_auto == 1) {
+		count_systick_auto++;
+	}
+	if (flag_swing_auto == 2) {
+		count_systick_auto++;
+	}
+	//no swing out flag
+	if (flag_swing_auto == 3) {
+		count_systick_auto++;
+	}
+	if (flag_swing_auto == 4) {
+		count_systick_auto++;
+	}
+//	uint32_t count_swing_trig;
+//	uint32_t count_practice;
+	if (count_swing_trig == 0) {
+		count_practice++;
+
+	}
+	if (count_swing_trig == 1) {
+		count_practice++;
 	}
 
 }
