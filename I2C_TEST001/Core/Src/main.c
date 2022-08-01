@@ -327,6 +327,83 @@ int main(void)
 		sTime_temp.Seconds = 0;
 		sTime_temp.TimeFormat = 0;
 
+		//==========================================================================================================
+		//mode choose while loop
+		while (rising_edge >= 1) {
+			cur_tick = HAL_GetTick();
+			tick_gap = cur_tick - start_tick;
+
+			//remove bounce effect
+			if (tick_gap < 100 && rising_edge > 1) {
+				rising_edge = 1;
+			}
+
+			if (tick_gap >= 300) {
+
+				if (rising_edge == 1 && falling_edge >= 1) {
+
+					// init the temp
+					sTime_temp.Hours = 0;
+					sTime_temp.Minutes = 0;
+					sTime_temp.Seconds = 0;
+					sTime_temp.TimeFormat = 0;
+					cursor = 0;
+
+					// LCD up
+					LCD_Init(LCD_ADDR);
+					LCD_SendCommand(LCD_ADDR, 0b10000000);
+					strcpy(lcdup, "Set Time Mode");
+					LCD_SendString(LCD_ADDR, lcdup);
+					// LCD down
+					screen(cursor, sTime_temp);
+
+					LCD_SendCommand(LCD_ADDR, 0b00001111);
+
+					//init the user button
+					rising_edge = 0;
+					falling_edge = 0;
+					mode = 1;
+					printf("one click==========================\r\n");
+				}
+
+				if (rising_edge >= 2 && falling_edge >= 1) {
+					// init the temp
+					sTime_AL.Hours = 0;
+					sTime_AL.Minutes = 0;
+					sTime_AL.Seconds = 0;
+					sTime_AL.TimeFormat = 0;
+					cursor = 0;
+
+					// LCD up
+					LCD_Init(LCD_ADDR);
+					//blink on
+					LCD_SendCommand(LCD_ADDR, 0b00001111);
+
+					LCD_SendCommand(LCD_ADDR, 0b10000000);
+					strcpy(lcdup, "Alarm Mode");
+					LCD_SendString(LCD_ADDR, lcdup);
+					// LCD down
+					screen(cursor, sTime_AL);
+
+					//init the user button
+					rising_edge = 0;
+					falling_edge = 0;
+					mode = 2;
+
+					printf("two click++++++++++++++++++++++++++\r\n");
+				}
+
+				if (tick_gap >= 2000 && falling_edge == 0) {
+					rising_edge = 0;
+					falling_edge = 0;
+					mode = 3;
+					printf("long click//////////////////////////\r\n");
+				}
+			}
+		}
+	}
+	//==========================================================================================================
+
 		//Main loop
 		while (mode == 0) {
 			HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
@@ -389,77 +466,7 @@ int main(void)
 
 			////////////////////////////////////////////////////////////////////////////////////////////////////
 			}
-			//==========================================================================================================
-			//mode choose while loop
-			while (rising_edge >= 1) {
-				cur_tick = HAL_GetTick();
-				tick_gap = cur_tick - start_tick;
 
-				if (tick_gap >= 300) {
-
-					if (rising_edge == 1 && falling_edge >= 1) {
-
-						// init the temp
-						sTime_temp.Hours = 0;
-						sTime_temp.Minutes = 0;
-						sTime_temp.Seconds = 0;
-						sTime_temp.TimeFormat = 0;
-						cursor = 0;
-
-						// LCD up
-						LCD_Init(LCD_ADDR);
-						LCD_SendCommand(LCD_ADDR, 0b10000000);
-						strcpy(lcdup, "Set Time Mode");
-						LCD_SendString(LCD_ADDR, lcdup);
-						// LCD down
-						screen(cursor, sTime_temp);
-
-						LCD_SendCommand(LCD_ADDR, 0b00001111);
-
-						//init the user button
-						rising_edge = 0;
-						falling_edge = 0;
-						mode = 1;
-						printf("one click==========================\r\n");
-					}
-
-					if (rising_edge >= 2 && falling_edge >= 1) {
-						// init the temp
-						sTime_AL.Hours = 0;
-						sTime_AL.Minutes = 0;
-						sTime_AL.Seconds = 0;
-						sTime_AL.TimeFormat = 0;
-						cursor = 0;
-
-						// LCD up
-						LCD_Init(LCD_ADDR);
-						//blink on
-						LCD_SendCommand(LCD_ADDR, 0b00001111);
-
-						LCD_SendCommand(LCD_ADDR, 0b10000000);
-						strcpy(lcdup, "Alarm Mode");
-						LCD_SendString(LCD_ADDR, lcdup);
-						// LCD down
-						screen(cursor, sTime_AL);
-
-						//init the user button
-						rising_edge = 0;
-						falling_edge = 0;
-						mode = 2;
-
-						printf("two click++++++++++++++++++++++++++\r\n");
-					}
-
-					if (tick_gap >= 2000 && falling_edge == 0) {
-						rising_edge = 0;
-						falling_edge = 0;
-						mode = 3;
-						printf("long click//////////////////////////\r\n");
-					}
-				}
-			}
-		}
-		//==========================================================================================================
 		//Set Time loop
 		while (mode == 1) {
 
@@ -1097,45 +1104,12 @@ ADC_StatusTypeDef button_status(uint32_t value) {
 		return DOWN;
 	if (1800 < value && value < 2000)
 		return LEFT;
-	if (2800 < value && value < 3000)
+	if (2800 < value && value < 3100)
 		return RIGHT;
 	if (4000 < value && value < 5000)
 		return SELECT;
 
 	return NONE;
-}
-
-void screen(int cursor, RTC_TimeTypeDef sTime_screen) {
-	sprintf(Time_temp, "%s %02d:%02d:%02d", ampm[sTime_screen.TimeFormat],
-			sTime_screen.Hours, sTime_screen.Minutes, sTime_screen.Seconds);
-	LCD_SendCommand(LCD_ADDR, 0b11000000);
-	LCD_SendString(LCD_ADDR, Time_temp);
-	for (int i = 0; i < 11 - cursor; i++) {
-		LCD_SendCommand(LCD_ADDR, 0b00010000);
-	}
-}
-
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-
-	// rising edge
-	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 1) {
-		rising_edge++;
-
-		printf("rising edge : %d\r\n", rising_edge);
-		start_tick = HAL_GetTick();
-	}
-
-	// falling edge
-	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 0) {
-		if (rising_edge == 0) {
-			falling_edge = 0;
-		} else {
-			falling_edge++;
-		}
-		printf("falling edge : %d\r\n", falling_edge);
-	}
-
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
@@ -1145,6 +1119,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 //		HAL_ADC_PollForConversion(&hadc1, 10);
 		ADC_value = HAL_ADC_GetValue(&hadc1);
 		HAL_ADC_Stop(&hadc1);
+
+		if (3300 < ADC_value && ADC_value < 3400) {
+
+		}
+		else {
+			printf("%d\r\n", ADC_value);
+		}
 
 		if (button_status(ADC_value) == UP) {
 			up++;
@@ -1170,15 +1151,49 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			get_time_exit++;
 		}
 		get_time++;
-		printf("%d\r\n", get_time);
+//		printf("%d\r\n", get_time);
+	}
+}
+
+
+
+
+void screen(int cursor, RTC_TimeTypeDef sTime_screen) {
+	sprintf(Time_temp, "%s %02d:%02d:%02d", ampm[sTime_screen.TimeFormat],
+			sTime_screen.Hours, sTime_screen.Minutes, sTime_screen.Seconds);
+	LCD_SendCommand(LCD_ADDR, 0b11000000);
+	LCD_SendString(LCD_ADDR, Time_temp);
+	for (int i = 0; i < 11 - cursor; i++) {
+		LCD_SendCommand(LCD_ADDR, 0b00010000);
+	}
+}
+
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+
+	// rising edge
+	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 1) {
+		rising_edge++;
+
+		printf("rising edge : %d\r\n", rising_edge);
+		if (rising_edge == 1) {
+			start_tick = HAL_GetTick();
+		}
+
 	}
 
-	if (htim->Instance == TIM4) {
-		count_bit++;
-		flag = 1;
+	// falling edge
+	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 0) {
+		if (rising_edge == 0) {
+			falling_edge = 0;
+		} else {
+			falling_edge++;
+		}
+		printf("falling edge : %d\r\n", falling_edge);
 	}
 
 }
+
 
 void note(char pitch_text, char octave_text, char temp_text, int time, int volume) {
 
