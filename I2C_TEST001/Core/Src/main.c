@@ -327,6 +327,69 @@ int main(void)
 		sTime_temp.Seconds = 0;
 		sTime_temp.TimeFormat = 0;
 
+		//Main loop
+		while (mode == 0) {
+			HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+			HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+			HAL_ADC_Start(&hadc1);
+
+			sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
+					sTime.Hours, sTime.Minutes, sTime.Seconds);
+
+			if (strcmp(lcdup, "Park Jung Hwan") != 0) {
+				LCD_Init(LCD_ADDR);
+				strcpy(lcdup, "Park Jung Hwan");
+				// LCD up
+				LCD_SendCommand(LCD_ADDR, 0b10000000);
+				LCD_SendString(LCD_ADDR, lcdup);
+
+				sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
+						sTime.Hours, sTime.Minutes, sTime.Seconds);
+
+				// LCD down
+				LCD_SendCommand(LCD_ADDR, 0b11000000);
+				LCD_SendString(LCD_ADDR, Time);
+			}
+
+			sTimestart = sTimecur;
+			sTimecur = sTime.Seconds;
+
+			if (sTimecur != sTimestart) {
+				// LCD down
+				LCD_SendCommand(LCD_ADDR, 0b11000000);
+				LCD_SendString(LCD_ADDR, Time);
+			}
+			////////////////////////////////////////////////////////////////////////////////////////////////////
+			if (strcmp(Time, Time_AL) == 0) {
+				flag_alarm++;
+			}
+			if (flag_alarm > 0) {
+
+				song_time = 2000/verse1_time[count_note];
+
+				if (strlen(verse1[count_note]) == 3 && song_time >= count_bit) {
+
+					int time = 0;
+					char tempP = verse1[count_note][0];
+					char tempO = verse1[count_note][1];
+					char tempT = verse1[count_note][2];
+					note(tempP, tempO, tempT, 2000 / time, 2 + (count_bit));
+
+				} else if (strlen(verse1[count_note]) == 1) {
+					TIM3->CCR3 = 0;
+					count_note = 0;
+					flag_alarm = 0;
+				}
+
+				if (song_time < count_bit) {
+					count_note++;
+					count_bit = 0;
+				}
+
+
+			////////////////////////////////////////////////////////////////////////////////////////////////////
+			}
+
 		//==========================================================================================================
 		//mode choose while loop
 		while (rising_edge >= 1) {
@@ -404,68 +467,7 @@ int main(void)
 	}
 	//==========================================================================================================
 
-		//Main loop
-		while (mode == 0) {
-			HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-			HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-			HAL_ADC_Start(&hadc1);
 
-			sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
-					sTime.Hours, sTime.Minutes, sTime.Seconds);
-
-			if (strcmp(lcdup, "Park Jung Hwan") != 0) {
-				LCD_Init(LCD_ADDR);
-				strcpy(lcdup, "Park Jung Hwan");
-				// LCD up
-				LCD_SendCommand(LCD_ADDR, 0b10000000);
-				LCD_SendString(LCD_ADDR, lcdup);
-
-				sprintf(Time, "%s %02d:%02d:%02d", ampm[sTime.TimeFormat],
-						sTime.Hours, sTime.Minutes, sTime.Seconds);
-
-				// LCD down
-				LCD_SendCommand(LCD_ADDR, 0b11000000);
-				LCD_SendString(LCD_ADDR, Time);
-			}
-
-			sTimestart = sTimecur;
-			sTimecur = sTime.Seconds;
-
-			if (sTimecur != sTimestart) {
-				// LCD down
-				LCD_SendCommand(LCD_ADDR, 0b11000000);
-				LCD_SendString(LCD_ADDR, Time);
-			}
-			////////////////////////////////////////////////////////////////////////////////////////////////////
-			if (strcmp(Time, Time_AL) == 0) {
-				flag_alarm++;
-			}
-			if (flag_alarm > 0) {
-
-				song_time = 2000/verse1_time[count_note];
-
-				if (strlen(verse1[count_note]) == 3 && song_time >= count_bit) {
-
-					int time = 0;
-					char tempP = verse1[count_note][0];
-					char tempO = verse1[count_note][1];
-					char tempT = verse1[count_note][2];
-					note(tempP, tempO, tempT, 2000 / time, 2 + (count_bit));
-
-				} else if (strlen(verse1[count_note]) == 1) {
-					TIM3->CCR3 = 0;
-					count_note = 0;
-					flag_alarm = 0;
-				}
-
-				if (song_time < count_bit) {
-					count_note++;
-					count_bit = 0;
-				}
-
-
-			////////////////////////////////////////////////////////////////////////////////////////////////////
-			}
 
 		//Set Time loop
 		while (mode == 1) {
