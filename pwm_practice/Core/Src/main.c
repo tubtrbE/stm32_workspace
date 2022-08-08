@@ -180,6 +180,13 @@ int main(void)
 		// set the default setting
 		if (flag_default_setting == 1) {
 			printf("\r\n세팅모드에 진입합니다.\r\n");
+			printf("COMMAND\r\n");
+			printf("1.NOT STROKE SETTING : 'O', 'P'\r\n");
+			printf("2.YES STROKE SETTING : 'K', 'L'\r\n");
+			printf("3.(HANDLE) BODY POS: 'W', 'S'\r\n");
+			printf("4.(HANDLE) SWING POS: 'A', 'D'\r\n");
+			printf("5.(HANDLE) PEAK POS: 'Q', 'E'\r\n");
+			printf("5.END SETTING: 'X'\r\n");
 			flag_default_setting = 2;
 		}
 		while (flag_default_setting == 2) {
@@ -286,6 +293,10 @@ int main(void)
 		if (flag_swing_mode == 1) {
 			flag_swing_mode = 2;
 			printf("\r\n스윙모드에 진입합니다.\r\n");
+			printf("COMMAND\r\n");
+			printf("1.YES SWING  : '0', '1'\r\n");
+			printf("2.NOT SWING  : '2', '3'\r\n");
+			printf("5.END SWING: 'X'\r\n");
 
 			num_swing = num_swing_up;
 			TIM3->CCR4 = num_swing;
