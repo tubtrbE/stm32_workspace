@@ -83,6 +83,7 @@ void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 1 */
 
   /* USER CODE END TIM3_Init 1 */
+
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 29;
   htim3.Init.CounterMode = TIM_COUNTERMODE_DOWN;
