@@ -7,7 +7,12 @@
 
 #include "flash.h"
 
-
+// Flash variable
+uint32_t FirstSector = 0, NbOfSectors = 0;
+uint32_t Address = 0, SECTORError = 0;
+__IO uint32_t data32 = 0 , MemoryProgramStatus = 0;
+/*Variable used for Erase procedure*/
+static FLASH_EraseInitTypeDef EraseInitStruct;
 
 uint32_t GetSector(uint32_t Address)
 {
@@ -137,4 +142,51 @@ uint32_t GetSectorSize(uint32_t Sector)
   return sectorsize;
 }
 
+void FlashWritingOne (uint32_t FLASH_USER_ADDR, uint32_t DATA_32)  {
+
+	  HAL_FLASH_Unlock();
+
+	  NbOfSectors = 1;
+	  FirstSector = GetSector(FLASH_USER_ADDR);
+	  EraseInitStruct.TypeErase     = FLASH_TYPEERASE_SECTORS;
+	  EraseInitStruct.VoltageRange  = FLASH_VOLTAGE_RANGE_3;
+	  EraseInitStruct.Sector        = FirstSector;
+	  EraseInitStruct.NbSectors     = NbOfSectors;
+
+	  if(HAL_FLASHEx_Erase(&EraseInitStruct, &SECTORError) != HAL_OK)
+	  {
+	  }
+
+	  Address = FLASH_USER_ADDR;
+	  HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, Address, DATA_32);
+
+	  HAL_FLASH_Lock();
+}
+
+void FlashWritingRange (uint32_t FLASH_USER_START_ADDR, uint32_t FLASH_USER_END_ADDR, uint32_t DATA_32) {
+
+	  HAL_FLASH_Unlock();
+	  FirstSector = GetSector(FLASH_USER_START_ADDR);
+	  NbOfSectors = GetSector(FLASH_USER_END_ADDR) - FirstSector + 1;
+	  EraseInitStruct.TypeErase     = FLASH_TYPEERASE_SECTORS;
+	  EraseInitStruct.VoltageRange  = FLASH_VOLTAGE_RANGE_3;
+	  EraseInitStruct.Sector        = FirstSector;
+	  EraseInitStruct.NbSectors     = NbOfSectors;
+
+	  if(HAL_FLASHEx_Erase(&EraseInitStruct, &SECTORError) != HAL_OK)
+	  {
+	  }
+
+	  Address = FLASH_USER_START_ADDR;
+	  while(Address < FLASH_USER_END_ADDR)
+	  {
+	    if(HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, Address, DATA_32) == HAL_OK)
+	    {
+	      Address = Address + 4;
+	    }
+
+	  }
+
+	  HAL_FLASH_Lock();
+}
 

@@ -82,8 +82,6 @@ uint32_t flag_alarm = 0;
 uint32_t count_note = 0;
 uint32_t song_time_division = 0;
 
-
-
 uint32_t sTimestart = 0;
 uint32_t sTimecur = 0;
 
@@ -133,14 +131,6 @@ RTC_TimeTypeDef sTime_AL;
 uint32_t buf[20], buf_index = 0;
 uint32_t rx;
 
-// Flash variable
-uint32_t FirstSector = 0, NbOfSectors = 0;
-uint32_t Address = 0, SECTORError = 0;
-__IO uint32_t data32 = 0 , MemoryProgramStatus = 0;
-/*Variable used for Erase procedure*/
-static FLASH_EraseInitTypeDef EraseInitStruct;
-
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -151,6 +141,9 @@ int __io_putchar(int ch) {
 	HAL_UART_Transmit(&huart3, &ch, 1, 100);
 	return ch;
 }
+
+void InitFlag(int num) ;
+
 // i2c adc func
 ADC_StatusTypeDef button_status(uint32_t value);
 void screen(int cursor, RTC_TimeTypeDef sTime_screen);
@@ -482,19 +475,8 @@ int main(void)
 
 				// EXIT without apply
 				if (falling_edge > 0) {
-					// ===========================================init func
-
-					// init the user button
-					apply_flag = 0;
-					rising_edge = 0;
-					falling_edge = 0;
-
-					// turn off the blink
-					LCD_SendCommand(LCD_ADDR, 0b00001110);
-					mode = 0;
-					printf("MODE exit\r\n");
-
-					// ===========================================init func
+					InitFlag(0);
+					printf("MODE1 exit\r\n");
 				}
 				// APPLY and exit
 				if (falling_edge == 0 && get_time_apply > 4) {
@@ -506,20 +488,8 @@ int main(void)
 					sTime.TimeFormat = sTime_temp.TimeFormat;
 					HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 
-					// ===========================================init func
-					// turn off the blink
-					LCD_SendCommand(LCD_ADDR, 0b00001110);
-
-					// init the user button
-					apply_flag = 0;
-					get_time_apply = 0;
-					rising_edge = 0;
-					falling_edge = 0;
-
-					mode = 0;
-					printf("MODE APPLY\r\n");
-
-					// ===========================================init func
+					InitFlag(0);
+					printf("MODE1 APPLY\r\n");
 				}
 			}
 
@@ -757,14 +727,7 @@ int main(void)
 				if (falling_edge > 0) {
 					// ===========================================init func
 
-					// init the user button
-					apply_flag = 0;
-					rising_edge = 0;
-					falling_edge = 0;
-
-					// turn off the blink
-					LCD_SendCommand(LCD_ADDR, 0b00001110);
-					mode = 0;
+					InitFlag(0);
 					printf("MODE exit\r\n");
 
 					// ===========================================init func
@@ -776,16 +739,7 @@ int main(void)
 							sTime_AL.Hours, sTime_AL.Minutes, sTime_AL.Seconds);
 
 					// ===========================================init func
-					// turn off the blink
-					LCD_SendCommand(LCD_ADDR, 0b00001110);
-
-					// init the user button
-					apply_flag = 0;
-					get_time_apply = 0;
-					rising_edge = 0;
-					falling_edge = 0;
-
-					mode = 0;
+					InitFlag(0);
 					printf("MODE APPLY\r\n");
 
 					// ===========================================init func
@@ -1007,89 +961,33 @@ int main(void)
 
 				// EXIT without apply
 				if (falling_edge > 0) {
-					// ===========================================init func
-
-					// init the user button
-					apply_flag = 0;
-					rising_edge = 0;
-					falling_edge = 0;
-
-					// break the while & go to the mode 0
-					mode = 0;
+					InitFlag(0);
 					printf("MODE3 exit\r\n");
-
-					// ===========================================init func
 				}
 				// APPLY and exit
 				if (falling_edge == 0 && get_time_apply > 4) {
 
-					// Flash Setting Course--------------------------------------------------------------------------------------------------------------------------------------------------
+					LCD_Init(LCD_ADDR);
 
-					// value form for using the flash example
-					//#define FLASH_USER_START_ADDR   ADDR_FLASH_SECTOR_3   /* Start @ of user Flash area */
-					//#define FLASH_USER_END_ADDR     ADDR_FLASH_SECTOR_23  +  GetSectorSize(ADDR_FLASH_SECTOR_23) -1 /* End @ of user Flash area : sector start address + sector size -1 */
-					//#define DATA_32                 ((uint32_t)0x12345678)
+					// set address to 0x00
+					LCD_SendCommand(LCD_ADDR, 0b10000000);
+					strcpy(lcdup, "Flash Writing");
+					LCD_SendString(LCD_ADDR, lcdup);
+
+					// set address to 0x40
+					LCD_SendCommand(LCD_ADDR, 0b11000000);
+					LCD_SendString(LCD_ADDR, "Wait for a Sec");
+
+					// Flash Writing Course--------------------------------------------------------------------------------------------------------------------------------------------------
+					uint32_t DATA_32 = ((uint32_t)0x00000001);
+					uint32_t ADDR_FLASH_SECTOR = ADDR_FLASH_SECTOR_3;
+
+					FlashWritingOne (ADDR_FLASH_SECTOR, DATA_32) ;
 
 
-					uint32_t FLASH_USER_START_ADDR = ADDR_FLASH_SECTOR_3;
-					uint32_t FLASH_USER_END_ADDR = ADDR_FLASH_SECTOR_23;
-					uint32_t DATA_32 = 0x00000001;
-
-					HAL_FLASH_Unlock();
-
-					  /* Erase the user Flash area
-					    (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
-
-					  /* Get the 1st sector to erase */
-					  FirstSector = GetSector(FLASH_USER_START_ADDR);
-					  /* Get the number of sector to erase from 1st sector*/
-					  NbOfSectors = GetSector(FLASH_USER_END_ADDR) - FirstSector + 1;
-					  /* Fill EraseInit structure*/
-					  EraseInitStruct.TypeErase     = FLASH_TYPEERASE_SECTORS;
-					  EraseInitStruct.VoltageRange  = FLASH_VOLTAGE_RANGE_3;
-					  EraseInitStruct.Sector        = FirstSector;
-					  EraseInitStruct.NbSectors     = NbOfSectors;
-
-					  /* Note: If an erase operation in Flash memory also concerns data in the data or instruction cache,
-					     you have to make sure that these data are rewritten before they are accessed during code
-					     execution. If this cannot be done safely, it is recommended to flush the caches by setting the
-					     DCRST and ICRST bits in the FLASH_CR register. */
-					  if(HAL_FLASHEx_Erase(&EraseInitStruct, &SECTORError) != HAL_OK)
-					  {
-					  }
-
-					  /* Program the user Flash area word by word
-					    (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
-
-					  Address = FLASH_USER_START_ADDR;
-
-					  while(Address < FLASH_USER_END_ADDR)
-					  {
-					    if(HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, Address, DATA_32) == HAL_OK)
-					    {
-					      Address = Address + 4;
-					    }
-
-					  }
-
-					  /* Lock the Flash to disable the flash control register access (recommended
-					     to protect the FLASH memory against possible unwanted operation) *********/
-					  HAL_FLASH_Lock();
-					// Flash Setting Course--------------------------------------------------------------------------------------------------------------------------------------------------
-
-					// ===========================================init func
-
-					// init the user button
-					apply_flag = 0;
-					get_time_apply = 0;
-					rising_edge = 0;
-					falling_edge = 0;
-
-					// break the while & go to the mode 0
-					mode = 0;
+					// Flash Writing Course--------------------------------------------------------------------------------------------------------------------------------------------------
+					InitFlag(0);
 					printf("MODE3 APPLY\r\n");
-
-					// ===========================================init func
 				}
 			}
 
@@ -1183,6 +1081,16 @@ static void MX_NVIC_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//init user button & LCD
+void InitFlag(int num) {
+
+	LCD_Init(LCD_ADDR);
+	apply_flag = 0;
+	get_time_apply = 0;
+	rising_edge = 0;
+	falling_edge = 0;
+	mode = num;
+}
 ADC_StatusTypeDef button_status(uint32_t value) {
 
 	if (value < 100)

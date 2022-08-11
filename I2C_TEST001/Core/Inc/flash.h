@@ -50,7 +50,8 @@ extern "C" {
 
 uint32_t GetSector(uint32_t Address);
 uint32_t GetSectorSize(uint32_t Sector);
-
+void FlashWritingOne (uint32_t FLASH_USER_ADDR, uint32_t DATA_32) ;
+void FlashWritingRange (uint32_t FLASH_USER_START_ADDR, uint32_t FLASH_USER_END_ADDR, uint32_t DATA_32) ;
 
 //uint32_t FirstSector = 0, NbOfSectors = 0;
 //uint32_t Address = 0, SECTORError = 0;

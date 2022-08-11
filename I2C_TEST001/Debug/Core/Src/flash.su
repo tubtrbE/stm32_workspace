@@ -1,2 +1,4 @@
-../Core/Src/flash.c:12:10:GetSector	24	static
-../Core/Src/flash.c:120:10:GetSectorSize	24	static
+../Core/Src/flash.c:17:10:GetSector	24	static
+../Core/Src/flash.c:125:10:GetSectorSize	24	static
+../Core/Src/flash.c:145:6:FlashWritingOne	24	static
+../Core/Src/flash.c:166:6:FlashWritingRange	32	static
