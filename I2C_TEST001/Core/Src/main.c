@@ -27,10 +27,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+ #include <stdlib.h>
 #include <string.h>
 #include "lcd.h"
 #include "flash.h"
+#include "song.h"
 
 /* USER CODE END Includes */
 
@@ -45,18 +46,6 @@ typedef enum {
 	RIGHT = 0X05U
 } ADC_StatusTypeDef;
 
-typedef enum {
-	// APB1 == 90[mhz]
-	// prescaler == 30-1
-	N = 0,
-	C = 11762,
-	D = 10469,
-	E = 9318,
-	F = 8791,
-	G = 7825,
-	A = 6966,
-	B = 6200,
-} _PITCH;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -142,7 +131,9 @@ int __io_putchar(int ch) {
 	return ch;
 }
 
-void InitFlag(int num) ;
+void InitFlag(int num);
+char* note_address (int song_num,int count_note);
+int time_value (int song_num,int count_note);
 
 // i2c adc func
 ADC_StatusTypeDef button_status(uint32_t value);
@@ -201,108 +192,19 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+//  HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_3);
   HAL_TIM_Base_Start_IT(&htim4);
-
-  // Song_Traffic_Light_Note
-  char *verse1[] = {
-
-			"C4N", "C5N", "D5N", "E5N", "C5N","G4N",
-			"C5N", "G4N", "C5N", "D5N", "E5N",
-
-			"F3N", "C5N", "D5N", "E5N", "C5N","G4N",
-			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
-
-			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			"C5N", "G4N", "C5N", "D5N", "E5N",
-
-			"N5N", "E5N", "F5N", "E5N", "F5N", "E5N", "C5N", "D5N", "N5N",
-
-			"N5N", "C5N", "D5N", "E5N", "C5N","G4N",
-			"C5N", "G4N", "C5N", "D5N", "E5N",
-
-			"N5N", "C5N", "D5N", "E5N", "C5N","G4N",
-			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
-
-			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
-			"C5N", "G4N", "C5N", "F5N", "E5N",
-			"N5N","E5N","F5N","E5N","F5N","E5N","C5N","D5N","N5N",
-
-			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N",
-			"N5N","C5N","E5N","F5N","E5N","D5N","C5N","D5N",
-
-			"N5N","N5N","C5N","D5N","E5N",
-			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N", "D5N", "E5N",
-
-			"N4N","A4N","A4N","A4N","A4N","G4N","E4N","G4N",
-			"N5N","E5N","D5N","C5N","A5N","A5N","G5N",
-
-			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
-			"E5N","D5N","C5N","F5N","F5N","E5N","C5N",
-
-			"N5N","C5N","C5N","E5N","F5N","D5N",
-			"E5N","D5N","C5N","A5N","A5N","G5N",
-
-			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
-			"E5N","D5N","C5N","F5N","F5N","E5N","C5N","C5N","E5N","D5N",
-			"E5N","F5N","E5N","D5N","C5N",
-
-			"0",
-			};
-
-	// Song_Traffic Light_time
-	int verse1_time[] = {
-			4,8,8,4,8,8,
-			8,8,8,8,2,
-
-			4,8,8,4,8,8,
-			8,8,8,8,8,8,8,8,
-
-			4,8,8,4,8,8,
-			8,8,8,8,2,
-
-			4,8,8,8,8,8,8,2,2,
-
-			4,8,8,4,8,8,
-			8,8,8,8,2,
-
-			4,8,8,4,8,8,
-			8,8,8,8,8,8,8,8,
-
-			4,8,8,4,8,8,
-			8,8,8,8,2,
-			4,8,8,8,8,8,8,2,2,
-
-			4,8,8,8,8,8,8,8,8,4,
-			4,8,8,4,4,8,8,4,
-
-			2,8,8,8,8,
-			4,8,8,8,8,8,8,8,8,8,8,2,
-
-			8,8,8,8,8,8,8,8,
-			1.5,8,8,4,8,8,4,
-
-			8,8,8,8,8,8,4,
-			8,8,4,8,8,8,8,
-
-			8,8,4,8,8,4,
-			8,8,4,8,8,4,
-
-			8,8,8,8,8,8,4,
-			8,8,4,8,8,8,8,8,8,2,
-			8,8,8,8,1
-	};
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	init();
+  init();
 	LCD_Init(LCD_ADDR);
 	up = 0;
 	down = 0;
 	left = 0;
 	right = 0;
-	TIM3->CCR3 = 0;
+
 	//	LCD_SendCommand(LCD_ADDR, 0b00000001);
 
 	while (1) {
@@ -347,27 +249,36 @@ int main(void)
 			////////////////////////////////////////////////////////////////////////////////////////////////////
 			if (strcmp(Time, Time_AL) == 0) {
 				flag_alarm++;
+				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+
 			}
 			if (flag_alarm > 0) {
+				int song_temp_time = time_value(1,count_note);
+				char* song_temp_note = note_address(1,count_note);
 
-				song_time_division = 2000/verse1_time[count_note];
+				song_time_division = 2000/ song_temp_time;
 
-				if (strlen(verse1[count_note]) == 3 && song_time_division >= count_bit) {
+				if (song_temp_note[count_note] != '0' && song_time_division >= count_bit) {
 
-					int time = 0;
-					char tempP = verse1[count_note][0];
-					char tempO = verse1[count_note][1];
-					char tempT = verse1[count_note][2];
-					note(tempP, tempO, tempT, 2000 / time, 2 + (count_bit));
+					char tempP;
+					char tempO;
+					char tempT;
 
-				} else if (strlen(verse1[count_note]) == 1) {
+					tempP = song_temp_note[0];
+					tempO = song_temp_note[1];
+					tempT = song_temp_note[2];
+
+					note(tempP, tempO, tempT, 2000 / song_time_division,2 + (count_bit));
+
+				} else if (song_temp_note[count_note] == '0') {
 					TIM3->CCR3 = 0;
 					count_note = 0;
 					flag_alarm = 0;
+					HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_3);
 				}
 
 				if (song_time_division < count_bit) {
-					count_note++;
+					count_note ++;
 					count_bit = 0;
 				}
 
@@ -1178,7 +1089,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	}
 
 	if (htim->Instance == TIM4) {
-		count_bit++;
+		if (flag_alarm > 0) {
+			count_bit++;
+		}
+		else {
+			count_bit = 0;
+		}
 		flag_bit_1ms = 1;
 	}
 
@@ -1263,6 +1179,33 @@ uint32_t temp_change (char temp_text) {
 		return 0;
 	}
 }
+
+char* note_address (int song_num,int count_note) {
+	  char *song_temp_note;
+
+	  if (song_num == 1) {
+		  song_temp_note = &song_note_1[count_note][0];
+	  }
+	  else if (song_num == 2) {
+		  song_temp_note = &song_note_2[count_note][0];
+	  }
+
+	  return song_temp_note;
+}
+
+int time_value (int song_num,int count_note) {
+	int song_time;
+
+	if (song_num == 1) {
+		song_time = song_time_1[count_note];
+	  }
+
+	else if (song_num == 2) {
+		song_time = song_time_2[count_note];
+		}
+	return song_time;
+}
+
 
 /* USER CODE END 4 */
 
