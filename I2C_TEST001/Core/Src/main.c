@@ -30,6 +30,7 @@
 
 #include <string.h>
 #include "lcd.h"
+#include "flash.h"
 
 /* USER CODE END Includes */
 
@@ -76,10 +77,10 @@ uint32_t volume_search;
 
 //TIM variable
 uint32_t count_bit = 0;
-uint32_t flag = 0;
+uint32_t flag_bit_1ms = 0;
 uint32_t flag_alarm = 0;
 uint32_t count_note = 0;
-uint32_t song_time = 0;
+uint32_t song_time_division = 0;
 
 
 
@@ -131,6 +132,15 @@ RTC_TimeTypeDef sTime_AL;
 // UART variable
 uint32_t buf[20], buf_index = 0;
 uint32_t rx;
+
+// Flash variable
+uint32_t FirstSector = 0, NbOfSectors = 0;
+uint32_t Address = 0, SECTORError = 0;
+__IO uint32_t data32 = 0 , MemoryProgramStatus = 0;
+/*Variable used for Erase procedure*/
+static FLASH_EraseInitTypeDef EraseInitStruct;
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -199,60 +209,55 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
   HAL_TIM_Base_Start_IT(&htim4);
-	char *verse1[] = {
 
-	///////////////////////////////////////////////////////////
-			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
+  // Song_Traffic_Light_Note
+  char *verse1[] = {
+
+			"C4N", "C5N", "D5N", "E5N", "C5N","G4N",
 			"C5N", "G4N", "C5N", "D5N", "E5N",
 
-			"F3N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			"F3N", "C5N", "D5N", "E5N", "C5N","G4N",
 			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
 
 			"C4N", "C5N", "D5N", "E5N", "C5N", "G4N",
 			"C5N", "G4N", "C5N", "D5N", "E5N",
 
-			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
+			"N5N", "E5N", "F5N", "E5N", "F5N", "E5N", "C5N", "D5N", "N5N",
 
-			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			"N5N", "C5N", "D5N", "E5N", "C5N","G4N",
 			"C5N", "G4N", "C5N", "D5N", "E5N",
 
-			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
+			"N5N", "C5N", "D5N", "E5N", "C5N","G4N",
 			"C5N", "G4N","C5N","E5N","F5N","E5N","D5N","C5N",
 
 			"N5N", "C5N", "D5N", "E5N", "C5N", "G4N",
 			"C5N", "G4N", "C5N", "F5N", "E5N",
-
-			"N5N","E5N","F5N","E5N","F5N","E5N","C5N"   ,"D5N","N5N",
+			"N5N","E5N","F5N","E5N","F5N","E5N","C5N","D5N","N5N",
 
 			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N",
 			"N5N","C5N","E5N","F5N","E5N","D5N","C5N","D5N",
 
 			"N5N","N5N","C5N","D5N","E5N",
-
 			"N5N","D5N","D5N","D5N","D5N", "C5N", "G4N", "C5N", "G4N", "C5N", "D5N", "E5N",
 
 			"N4N","A4N","A4N","A4N","A4N","G4N","E4N","G4N",
-
-			"N5N","E5N","D5N",    "C5N","A5N","A5N","G5N",
+			"N5N","E5N","D5N","C5N","A5N","A5N","G5N",
 
 			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
-
 			"E5N","D5N","C5N","F5N","F5N","E5N","C5N",
 
 			"N5N","C5N","C5N","E5N","F5N","D5N",
-/////////////////////////////////////////////////////////////////
-			"E5N","D5N",    "C5N","A5N","A5N","G5N",
+			"E5N","D5N","C5N","A5N","A5N","G5N",
+
 			"E5N","D5N","C5N","C5N","C5N","D5N","E5N",
 			"E5N","D5N","C5N","F5N","F5N","E5N","C5N","C5N","E5N","D5N",
 			"E5N","F5N","E5N","D5N","C5N",
 
-
 			"0",
-	///////////////////////////////////////////////////////////
 			};
 
+	// Song_Traffic Light_time
 	int verse1_time[] = {
-			//?��?��미도?��?��?��?��?���???????
 			4,8,8,4,8,8,
 			8,8,8,8,2,
 
@@ -272,7 +277,6 @@ int main(void)
 
 			4,8,8,4,8,8,
 			8,8,8,8,2,
-			//미파미파미도?��
 			4,8,8,8,8,8,8,2,2,
 
 			4,8,8,8,8,8,8,8,8,4,
@@ -282,32 +286,19 @@ int main(void)
 			4,8,8,8,8,8,8,8,8,8,8,2,
 
 			8,8,8,8,8,8,8,8,
-			//미레?�� ?��?��?��
 			1.5,8,8,4,8,8,4,
 
-			//미레?��?��?��?���???????
 			8,8,8,8,8,8,4,
-
-			//미레?�� ?��?��미도
 			8,8,4,8,8,8,8,
 
-			//N?��?��미파?��
 			8,8,4,8,8,4,
-///////////////////////////////////////////////////
-			//미레?�� ?��?��?��
 			8,8,4,8,8,4,
 
-			//미레?��?��?��?���???????
 			8,8,8,8,8,8,4,
-
-			//미레?�� ?��?��미도  ?��미레
 			8,8,4,8,8,8,8,8,8,2,
-
-			//미파미레?��
 			8,8,8,8,1
 	};
 
-//  HAL_UART_Receive_IT(&huart3, &rx, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -366,9 +357,9 @@ int main(void)
 			}
 			if (flag_alarm > 0) {
 
-				song_time = 2000/verse1_time[count_note];
+				song_time_division = 2000/verse1_time[count_note];
 
-				if (strlen(verse1[count_note]) == 3 && song_time >= count_bit) {
+				if (strlen(verse1[count_note]) == 3 && song_time_division >= count_bit) {
 
 					int time = 0;
 					char tempP = verse1[count_note][0];
@@ -382,11 +373,10 @@ int main(void)
 					flag_alarm = 0;
 				}
 
-				if (song_time < count_bit) {
+				if (song_time_division < count_bit) {
 					count_note++;
 					count_bit = 0;
 				}
-
 
 			////////////////////////////////////////////////////////////////////////////////////////////////////
 			}
@@ -457,6 +447,17 @@ int main(void)
 					}
 
 					if (tick_gap >= 2000 && falling_edge == 0) {
+
+						LCD_Init(LCD_ADDR);
+
+						// set address to 0x00
+						LCD_SendCommand(LCD_ADDR, 0b10000000);
+						LCD_SendString(LCD_ADDR, "Music Setting");
+
+						// set address to 0x40
+						LCD_SendCommand(LCD_ADDR, 0b11000000);
+						LCD_SendString(LCD_ADDR, "1.Traffic Light");
+
 						rising_edge = 0;
 						falling_edge = 0;
 						mode = 3;
@@ -998,11 +999,98 @@ int main(void)
 		//Song choice loop
 		while (mode == 3) {
 
-			if (rising_edge >= 1 && falling_edge >= 1) {
-				rising_edge = 0;
-				falling_edge = 0;
-				mode = 0;
-				printf("mode reset\r\n");
+			// USER CAN CHOOSE EXIT OR APPLY
+			if (rising_edge >= 1) {
+
+				// this flag is check the exit or apply
+				apply_flag = 1;
+
+				// EXIT without apply
+				if (falling_edge > 0) {
+					// ===========================================init func
+
+					// init the user button
+					apply_flag = 0;
+					rising_edge = 0;
+					falling_edge = 0;
+
+					// break the while & go to the mode 0
+					mode = 0;
+					printf("MODE3 exit\r\n");
+
+					// ===========================================init func
+				}
+				// APPLY and exit
+				if (falling_edge == 0 && get_time_apply > 4) {
+
+					// Flash Setting Course--------------------------------------------------------------------------------------------------------------------------------------------------
+
+					// value form for using the flash example
+					//#define FLASH_USER_START_ADDR   ADDR_FLASH_SECTOR_3   /* Start @ of user Flash area */
+					//#define FLASH_USER_END_ADDR     ADDR_FLASH_SECTOR_23  +  GetSectorSize(ADDR_FLASH_SECTOR_23) -1 /* End @ of user Flash area : sector start address + sector size -1 */
+					//#define DATA_32                 ((uint32_t)0x12345678)
+
+
+					uint32_t FLASH_USER_START_ADDR = ADDR_FLASH_SECTOR_3;
+					uint32_t FLASH_USER_END_ADDR = ADDR_FLASH_SECTOR_23;
+					uint32_t DATA_32 = 0x00000001;
+
+					HAL_FLASH_Unlock();
+
+					  /* Erase the user Flash area
+					    (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
+
+					  /* Get the 1st sector to erase */
+					  FirstSector = GetSector(FLASH_USER_START_ADDR);
+					  /* Get the number of sector to erase from 1st sector*/
+					  NbOfSectors = GetSector(FLASH_USER_END_ADDR) - FirstSector + 1;
+					  /* Fill EraseInit structure*/
+					  EraseInitStruct.TypeErase     = FLASH_TYPEERASE_SECTORS;
+					  EraseInitStruct.VoltageRange  = FLASH_VOLTAGE_RANGE_3;
+					  EraseInitStruct.Sector        = FirstSector;
+					  EraseInitStruct.NbSectors     = NbOfSectors;
+
+					  /* Note: If an erase operation in Flash memory also concerns data in the data or instruction cache,
+					     you have to make sure that these data are rewritten before they are accessed during code
+					     execution. If this cannot be done safely, it is recommended to flush the caches by setting the
+					     DCRST and ICRST bits in the FLASH_CR register. */
+					  if(HAL_FLASHEx_Erase(&EraseInitStruct, &SECTORError) != HAL_OK)
+					  {
+					  }
+
+					  /* Program the user Flash area word by word
+					    (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
+
+					  Address = FLASH_USER_START_ADDR;
+
+					  while(Address < FLASH_USER_END_ADDR)
+					  {
+					    if(HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, Address, DATA_32) == HAL_OK)
+					    {
+					      Address = Address + 4;
+					    }
+
+					  }
+
+					  /* Lock the Flash to disable the flash control register access (recommended
+					     to protect the FLASH memory against possible unwanted operation) *********/
+					  HAL_FLASH_Lock();
+					// Flash Setting Course--------------------------------------------------------------------------------------------------------------------------------------------------
+
+					// ===========================================init func
+
+					// init the user button
+					apply_flag = 0;
+					get_time_apply = 0;
+					rising_edge = 0;
+					falling_edge = 0;
+
+					// break the while & go to the mode 0
+					mode = 0;
+					printf("MODE3 APPLY\r\n");
+
+					// ===========================================init func
+				}
 			}
 
 			// clear the get_time flag (to measure the time)
@@ -1183,14 +1271,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if (htim->Instance == TIM4) {
 		count_bit++;
-		flag = 1;
+		flag_bit_1ms = 1;
 	}
 
 }
 
 void note(char pitch_text, char octave_text, char temp_text, int time, int volume) {
 
-	if (flag == 1) {
+	if (flag_bit_1ms == 1) {
 		int pitch = pitch_change(pitch_text);
 		int octave = octave_change(octave_text);
 		int temp = temp_change(temp_text);
@@ -1218,7 +1306,7 @@ void note(char pitch_text, char octave_text, char temp_text, int time, int volum
 		volume_search = volume;
 		TIM3->CCR3 = pitch / volume;
 
-		flag = 0;
+		flag_bit_1ms = 0;
 	}
 }
 uint32_t pitch_change (char pitch_text) {
