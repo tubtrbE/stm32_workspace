@@ -20,6 +20,8 @@ typedef enum {
 	A = 6966,
 	B = 6200,
 } _PITCH;
+	extern char song_title_1[] = "1.Traffic Light";
+	extern char song_title_2[] = "2.star";
 
 
   // Song_Traffic_Light_Note

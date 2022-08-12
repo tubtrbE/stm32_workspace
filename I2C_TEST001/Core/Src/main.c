@@ -60,8 +60,7 @@ typedef enum {
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint32_t pitch_search;
-uint32_t volume_search;
+uint8_t song_flag = 0;
 
 //TIM_PWM variable
 uint32_t count_bit = 0;
@@ -156,6 +155,8 @@ void mode_func_SetTime();
 void mode_func_SetAlarm();
 void mode_func_SetSong();
 
+uint32_t song_Set(int flag) ;
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -202,8 +203,6 @@ int main(void) {
 	MX_NVIC_Init();
 	/* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim2);
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
-//  HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_3);
 	HAL_TIM_Base_Start_IT(&htim4);
 	/* USER CODE END 2 */
 
@@ -228,9 +227,6 @@ int main(void) {
 		mode_func_SetTime();
 		mode_func_SetAlarm();
 		mode_func_SetSong();
-		memset(buf, 0, sizeof(buf));
-		sprintf(buf, "%d\r\n", ADC_value);
-
 
 		/* USER CODE END WHILE */
 
@@ -403,7 +399,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			get_time_exit++;
 		}
 		get_time++;
-//		printf("%d\r\n", get_time);
+		printf("%d\r\n", ADC_value);
 	}
 
 	if (htim->Instance == TIM4) {
@@ -444,8 +440,6 @@ void note(char pitch_text, char octave_text, char temp_text, int time,
 		}
 
 		TIM3->ARR = pitch;
-		pitch_search = pitch;
-		volume_search = volume;
 		TIM3->CCR3 = pitch / volume;
 
 		flag_bit_1ms = 0;
@@ -847,18 +841,19 @@ void mode_func_Normal() {
 				LCD_SendString(LCD_ADDR, Time);
 			}
 			////////////////////////////////////////////////////////////////////////////////////////////////////
+			////////////////////////////////////////////////////////////////////////////////////////////////////
 			if (strcmp(Time, Time_AL) == 0) {
 				flag_alarm++;
 				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
 
 			}
 			if (flag_alarm > 0) {
-				int song_temp_time = time_value(1, count_note);
-				char *song_temp_note = note_address(1, count_note);
+				int song_temp_time = time_value(song_flag, count_note);
+				char *song_temp_note = note_address(song_flag, count_note);
 
 				song_time_division = 2000 / song_temp_time;
 
-				if (song_temp_note[count_note] != '0'&& song_time_division >= count_bit) {
+				if (song_temp_note[count_note] != '0' && song_time_division >= count_bit) {
 
 					char tempP;
 					char tempO;
@@ -882,6 +877,7 @@ void mode_func_Normal() {
 					count_bit = 0;
 				}
 
+				////////////////////////////////////////////////////////////////////////////////////////////////////
 				////////////////////////////////////////////////////////////////////////////////////////////////////
 			}
 			//==========================================================================================================
@@ -996,6 +992,27 @@ void mode_func_SetAlarm() {
 void mode_func_SetSong() {
 		//Song choice loop
 		while (mode == 3) {
+			HAL_ADC_Start(&hadc1);
+
+
+
+			if (up > 0) {
+				song_flag++;
+				up = 0;
+			}
+			if (down > 0) {
+				song_flag--;
+				down = 0;
+			}
+
+			if (song_flag <= 0) {
+				song_flag = 1;
+			}
+			else if (song_flag > 2) {
+				song_flag = 2;
+			}
+
+			uint32_t DATA_32 = song_Set(song_flag);
 
 			// USER CAN CHOOSE EXIT OR APPLY
 			if (rising_edge >= 1) {
@@ -1023,11 +1040,7 @@ void mode_func_SetSong() {
 					LCD_SendString(LCD_ADDR, "Wait for a Sec");
 
 					// Flash Writing Course--------------------------------------------------------------------------------------------------------------------------------------------------
-					uint32_t DATA_32 = ((uint32_t) 0x00000001);
-
-
 					uint32_t ADDR_FLASH_SECTOR = ADDR_FLASH_SECTOR_3;
-
 					FlashWritingOne(ADDR_FLASH_SECTOR, DATA_32);
 
 					// Flash Writing Course--------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1040,6 +1053,38 @@ void mode_func_SetSong() {
 			get_time = 0;
 		}
 		//==========================================================================================================
+}
+
+uint32_t song_Set(int flag) {
+	uint32_t DATA_32;
+	if (flag == 1) {
+		DATA_32 = 0x00000001;
+
+		LCD_Init(LCD_ADDR);
+
+		// set address to 0x00
+		LCD_SendCommand(LCD_ADDR, 0b10000000);
+		LCD_SendString(LCD_ADDR, "Music Setting");
+
+		// set address to 0x40
+		LCD_SendCommand(LCD_ADDR, 0b11000000);
+		LCD_SendString(LCD_ADDR, song_title_1);
+	}
+	if (flag == 2) {
+		DATA_32 = 0x00000002;
+
+		LCD_Init(LCD_ADDR);
+
+		// set address to 0x00
+		LCD_SendCommand(LCD_ADDR, 0b10000000);
+		LCD_SendString(LCD_ADDR, "Music Setting");
+
+		// set address to 0x40
+		LCD_SendCommand(LCD_ADDR, 0b11000000);
+		LCD_SendString(LCD_ADDR, song_title_2);
+	}
+
+	return DATA_32;
 }
 /* USER CODE END 4 */
 
