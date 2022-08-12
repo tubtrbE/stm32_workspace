@@ -6,7 +6,7 @@
  */
 /* Includes ------------------------------------------------------------------*/
 #include "lcd.h"
-
+#include "i2c.h"
 HAL_StatusTypeDef res;
 
 /* USER CODE BEGIN 0 */
@@ -19,8 +19,7 @@ void I2C_Scan() {
 		if (res == HAL_OK) {
 			char msg[64];
 			sprintf(msg, sizeof(msg), "0x%02X", i);
-			HAL_UART_Transmit(&huart3, (uint8_t*) msg, strlen(msg),
-			HAL_MAX_DELAY);
+			HAL_UART_Transmit(&huart3, (uint8_t*) msg, strlen(msg),HAL_MAX_DELAY);
 		} else {
 			HAL_UART_Transmit(&huart3, (uint8_t*) ".", 1, HAL_MAX_DELAY);
 		}
