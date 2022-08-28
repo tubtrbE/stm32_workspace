@@ -58,8 +58,7 @@ void delay (uint16_t time)
 	__HAL_TIM_SET_COUNTER(&htim3, 0);
 	while (__HAL_TIM_GET_COUNTER (&htim3) < time);
 }
-
-
+void HC_SRO4_Dis(TIM_HandleTypeDef *htim, int num);
 
 /* USER CODE END PFP */
 
@@ -72,21 +71,16 @@ void delay (uint16_t time)
 #define TIMCLOCK   90000000
 #define PRESCALAR  90
 
-uint32_t IC_Val1 = 0;
-uint32_t IC_Val2 = 0;
-uint32_t Difference = 0;
-int Is_First_Captured = 0;
+uint32_t IC_Val1[3] = {0};
+uint32_t IC_Val2[3] = {0};
+uint32_t Difference[3] = {0};
+uint32_t Distance[3]  = {0};
+int Is_First_Captured[3] = {0};
 float refClock = TIMCLOCK/(PRESCALAR);
 
 
-//uint32_t IC_Val1 = 0;
-//uint32_t IC_Val2 = 0;
-//uint32_t Difference = 0;
-//uint8_t Is_First_Captured = 0;  // is the first value captured ?
-uint8_t Distance  = 0;
-
 /* Measure Frequency */
-float frequency = 0;
+float frequency[3] = {0};
 
 
 
@@ -242,49 +236,68 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 }
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
+	int timer_flag = 0;
+	if (htim->Instance == TIM1) {
+		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+		{
+			timer_flag = 0;
+			HC_SRO4_Dis(htim, timer_flag);
+		}
+	}
 	if (htim->Instance == TIM3) {
 		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
 		{
-
+			timer_flag = 1;
+			HC_SRO4_Dis(htim, timer_flag);
 		}
 	}
+	if (htim->Instance == TIM4) {
+		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+		{
+			timer_flag = 2;
+			HC_SRO4_Dis(htim, timer_flag);
+		}
+	}
+
 }
 
 // 인수를 TIM 으로 바꿔볼 예정
-void HC_SRO4(int num) {
+void HC_SRO4_Dis(TIM_HandleTypeDef *htim, int num) {
 
-	if (Is_First_Captured == 0) // if the first rising edge is not captured
+	if (Is_First_Captured[num] == 0) // if the first rising edge is not captured
 	{
 //			IC_Val1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); // read the first value
-		IC_Val1 = TIM3->CNT; // read the first value
-		Is_First_Captured = 1;  // set the first captured as true
+		IC_Val1[num] = htim->Instance->CNT; // read the first value
+		Is_First_Captured[num] = 1;  // set the first captured as true
 		__HAL_TIM_SET_CAPTUREPOLARITY(htim, htim->Channel, TIM_INPUTCHANNELPOLARITY_FALLING);
 	}
 
 	else   // If the first rising edge is captured, now we will capture the second edge
 	{
 //			IC_Val2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);  // read second value
-		IC_Val2 = TIM3->CNT;
+		IC_Val2[num] = htim->Instance->CNT;
 
-		if (IC_Val2 > IC_Val1)
+		if (IC_Val2[num] > IC_Val1[num])
 		{
-			Difference = IC_Val2-IC_Val1;
+			Difference[num] = IC_Val2[num]-IC_Val1[num];
 		}
 
-		else if (IC_Val1 > IC_Val2)
+		else if (IC_Val1[num] > IC_Val2[num])
 		{
 
 			//TIM 3 is 16bit so overflow is occured if the cnt value is 0xffff
-			Difference = (0xffff - IC_Val1) + IC_Val2;
+			Difference[num] = (0xffff - IC_Val1[num]) + IC_Val2[num];
 		}
 
-		frequency = refClock/Difference;
+		frequency[num] = refClock/Difference[num];
+		Distance[num] = Difference[num] * .034/2;
 
 		//__HAL_TIM_SET_COUNTER(&htim3, 0);  // reset the counter
-		TIM3->CNT = 0;
+		htim->Instance->CNT = 0;
 		__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
-		Is_First_Captured = 0; // set it back to false
-		__HAL_TIM_DISABLE_IT(&htim3, TIM_IT_CC1);
+		Is_First_Captured[num] = 0; // set it back to false
+		//htim is address
+		__HAL_TIM_DISABLE_IT(htim, TIM_IT_CC1);
 	}
 }
 
