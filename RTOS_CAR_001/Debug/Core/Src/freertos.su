@@ -1,0 +1,7 @@
+../Core/Src/freertos.c:61:5:__io_putchar	16	static
+../Core/Src/freertos.c:81:6:vApplicationGetIdleTaskMemory	24	static
+../Core/Src/freertos.c:95:6:MX_FREERTOS_Init	128	static
+../Core/Src/freertos.c:156:6:StartDefaultTask	32	static
+../Core/Src/freertos.c:184:6:CheckingUartReceive	16	static
+../Core/Src/freertos.c:195:6:UartMovingCar	32	static
+../Core/Src/freertos.c:221:6:HAL_UART_RxCpltCallback	32	static
