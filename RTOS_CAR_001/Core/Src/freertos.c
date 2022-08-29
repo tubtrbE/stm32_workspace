@@ -25,6 +25,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stdio.h"
+#include "string.h"
 #include "motor.h"
 #include "usart.h"
 /* USER CODE END Includes */
@@ -36,7 +38,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define TIMCLOCK   90000000
+#define PRESCALAR  90
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -46,9 +49,91 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+
 osThreadId     Task1Handle;
 osThreadId     Task2Handle;
+
+uint32_t IC_Val1[3] = {0};
+uint32_t IC_Val2[3] = {0};
+uint32_t Difference[3] = {0};
+uint32_t Distance[3]  = {0};
+int Is_First_Captured[3] = {0};
+float refClock = TIMCLOCK/(PRESCALAR);
+
+/* Measure Frequency */
+float frequency[3] = {0};
+
+osThreadId     HS_SR04_Left_Checking;
+osThreadId     HS_SR04_Front_Checking;
+osThreadId     HS_SR04_Right_Checking;
+
+osThreadId     HS_SR04_Left_Handle;
+osThreadId     HS_SR04_Front_Handle;
+osThreadId     HS_SR04_Right_Handle;
 uint8_t rx_data[2];
+
+//typedef struct os_thread_def  {
+//  char                   *name;        ///< Thread name
+//  os_pthread             pthread;      ///< start address of thread function
+//  osPriority             tpriority;    ///< initial thread priority
+//  uint32_t               instances;    ///< maximum number of instances of that thread function
+//  uint32_t               stacksize;    ///< stack size requirements in bytes; 0 is default stack size
+//#if( configSUPPORT_STATIC_ALLOCATION == 1 )
+//  uint32_t               *buffer;      ///< stack buffer for static allocation; NULL for dynamic allocation
+//  osStaticThreadDef_t    *controlblock;     ///< control block to hold thread's data for static allocation; NULL for dynamic allocation
+//#endif
+//} osThreadDef_t;
+
+//// Checking Thread------------------------------------------------------------
+//const osThreadDef_t Uart_Check_Task_attributes  = {
+//  .name = "Uart_Check",
+//  .stacksize = configMINIMAL_STACK_SIZE*1,
+//  .tpriority =  osPriorityNormal,
+//};
+//
+//const osThreadDef_t Left_Check_Task_attributes  = {
+//  .name = "Left_Check",
+//  .stacksize = configMINIMAL_STACK_SIZE*1,
+//  .tpriority =  osPriorityNormal,
+//};
+//
+//const osThreadDef_t Front_Check_Task_attributes  = {
+//  .name = "Front_Check",
+//  .stacksize = configMINIMAL_STACK_SIZE*1,
+//  .tpriority =  osPriorityNormal,
+//};
+//
+//const osThreadDef_t Right_Check_Task_attributes  = {
+//		  .name = "Right_Check",
+//		  .stacksize = configMINIMAL_STACK_SIZE*1,
+//		  .tpriority =  osPriorityNormal,
+//};
+//
+//// Task Thread------------------------------------------------------------
+//
+//const osThreadDef_t Uart_Task_attributes  = {
+//  .name = "Uart_Task",
+//  .stacksize = configMINIMAL_STACK_SIZE*1,
+//  .tpriority =  osPriorityNormal,
+//};
+//
+//const osThreadDef_t Left_Task_attributes  = {
+//  .name = "Left_Task",
+//  .stacksize = configMINIMAL_STACK_SIZE*1,
+//  .tpriority =  osPriorityNormal,
+//};
+//
+//const osThreadDef_t Front_Task_attributes  = {
+//  .name = "Front_Task",
+//  .stacksize = configMINIMAL_STACK_SIZE*1,
+//  .tpriority =  osPriorityNormal,
+//};
+//
+//const osThreadDef_t Right_Task_attributes  = {
+//		  .name = "Right_Task",
+//		  .stacksize = configMINIMAL_STACK_SIZE*1,
+//		  .tpriority =  osPriorityNormal,
+//};
 
 
 /* USER CODE END Variables */
@@ -59,12 +144,23 @@ osSemaphoreId UartSemaHandle;
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 int __io_putchar(int ch) {
-    HAL_UART_Transmit(&huart6, &ch, 1, 1000);
+    HAL_UART_Transmit(&huart3, &ch, 1, 1000);
     return ch;
 }
+
+void HCSR04_Read (TIM_HandleTypeDef *htim, GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+void delay (uint16_t time, TIM_HandleTypeDef *htim);
+
 void CheckingUartReceive (void const * argument);
+void CheckingLeft (void const * argument);
+void CheckingFront (void const * argument);
+void CheckingRight (void const * argument);
 /** Car Control Using RasberryPi*/
 void UartMovingCar (void const * argument);
+void CarLeftSide (void const * argument);
+void CarFrontSide (void const * argument);
+void CarRightSide (void const * argument);
+
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void const * argument);
@@ -77,7 +173,6 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
 /* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
 static StaticTask_t xIdleTaskTCBBuffer;
 static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
-
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
 {
   *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
@@ -94,7 +189,11 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-
+	  Motor_Init();
+	  HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);
+	  HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
+	  HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);
+	  HAL_UART_Receive_IT(&huart6, &rx_data[0], 1);
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -131,16 +230,50 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  osThreadDef(tasktest1, CheckingUartReceive, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
-  Task1Handle = osThreadCreate(osThread(tasktest1), NULL);
+  osThreadDef(UartCheck, CheckingUartReceive, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
+  Task1Handle = osThreadCreate(osThread(UartCheck), NULL);
   if(!Task1Handle)
 	  printf("ERR : Console Task Creation Failure !\r\n");
 
-  osThreadDef(tasktest2, UartMovingCar, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
-  Task2Handle = osThreadCreate(osThread(tasktest2), NULL);
+  osThreadDef(UartTask, UartMovingCar, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
+  Task2Handle = osThreadCreate(osThread(UartTask), NULL);
 
   if(!Task2Handle)
      printf("ERR : CLI Task Creation Failure !\r\n");
+
+  // HC-SR04 LEFT -------------------------------------------------------------------------------------------------------
+  osThreadDef(LeftCheck, CheckingLeft, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
+  HS_SR04_Left_Checking = osThreadCreate(osThread(LeftCheck), NULL);
+  if(!HS_SR04_Left_Checking)
+	  printf("ERR : HS_SR04_left_Checking Creation Failure !\r\n");
+
+  osThreadDef(LeftTask, CarLeftSide, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
+  HS_SR04_Left_Handle = osThreadCreate(osThread(LeftTask), NULL);
+  if(!HS_SR04_Left_Handle)
+	  printf("ERR : HS_SR04_left_Handle Creation Failure !\r\n");
+
+  // HC-SR04 FRONT -------------------------------------------------------------------------------------------------------
+  osThreadDef(FrontCheck, CheckingFront, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
+  HS_SR04_Front_Checking = osThreadCreate(osThread(FrontCheck), NULL);
+  if(!HS_SR04_Front_Checking)
+	  printf("ERR : HS_SR04_Front_Checking Creation Failure !\r\n");
+
+  osThreadDef(FrontTask, CarFrontSide, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
+  HS_SR04_Front_Handle = osThreadCreate(osThread(FrontTask), NULL);
+  if(!HS_SR04_Front_Handle)
+	  printf("ERR : HS_SR04_Front_Handle Creation Failure !\r\n");
+
+  // HC-SR04 RIGHT -------------------------------------------------------------------------------------------------------
+  osThreadDef(RightCheck, CheckingRight, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
+  HS_SR04_Right_Checking = osThreadCreate(osThread(RightCheck), NULL);
+  if(!HS_SR04_Right_Checking)
+	  printf("ERR : HS_SR04_Right_Checking Creation Failure !\r\n");
+
+  osThreadDef(RightTask, CarRightSide, osPriorityNormal, 0,configMINIMAL_STACK_SIZE*1);
+  HS_SR04_Right_Handle = osThreadCreate(osThread(RightTask), NULL);
+  if(!HS_SR04_Right_Handle)
+	  printf("ERR : HS_SR04_Right_Handle Creation Failure !\r\n");
+
 
   /* USER CODE END RTOS_THREADS */
 
@@ -156,68 +289,114 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-	    BaseType_t xHigherPriorityWasTaken = pdFALSE;
-	    BaseType_t ret = pdTRUE;      // if semaphore is ret you know that isr give you queue
-	    signed char cByteRxed = '\0'; // this value is what you receive
+    BaseType_t xHigherPriorityWasTaken = pdFALSE;
+    BaseType_t ret = pdTRUE;      // if semaphore is ret you know that isr give you queue
+    signed char cByteRxed = '\0'; // this value is what you receive
 
-	  /* Infinite loop */
-		for (;;) {
+  /* Infinite loop */
+	for (;;) {
 
-			/* Block until the next char is available. */
-			ret = xSemaphoreTakeFromISR(UartSemaHandle, &xHigherPriorityWasTaken);
-			if (ret == pdPASS) {
-				/* Handle character in QUEUE */
-				ret = xQueueReceiveFromISR(UartQueueHandle, &cByteRxed,
-						&xHigherPriorityWasTaken);
-				if (ret) {
-					// do something . . .
-					Move(cByteRxed - '0');
-				}
+		/* Block until the next char is available. */
+		ret = xSemaphoreTakeFromISR(UartSemaHandle, &xHigherPriorityWasTaken);
+		if (ret == pdPASS) {
+			/* Handle character in QUEUE */
+			ret = xQueueReceiveFromISR(UartQueueHandle, &cByteRxed,
+					&xHigherPriorityWasTaken);
+			if (ret) {
+				// do something . . .
+				Move(cByteRxed - '0');
 			}
-			osDelay(50);
 		}
+		osDelay(50);
+	}
   /* USER CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+
+// Task ---------------------------------------------------------------------------------------
+void UartMovingCar (void const * argument)
+{
+	for (;;) {
+		osDelay(50);
+	}
+}
+
+void CarLeftSide (void const * argument){
+	for (;;) {
+		osDelay(50);
+	}
+}
+
+void CarFrontSide (void const * argument){
+	for (;;) {
+		osDelay(50);
+	}
+}
+void CarRightSide (void const * argument){
+
+	for (;;) {
+		osDelay(50);
+	}
+}
+
+
+// ISR Checking-------------------------------------------------------------------------------
+
 void CheckingUartReceive (void const * argument)
 {
     /* Infinite loop */
     for(;;)
     {
-
-//    	HAL_UART_Receive_IT(&huart6, &rx_data[0], 1);
+    	HAL_UART_Receive_IT(&huart6, &rx_data[0], 1);
     	osDelay(10);
     }
 }
+void CheckingLeft (void const * argument) {
+    /* Infinite loop */
+    for(;;)
+    {
+    	HCSR04_Read(&htim1, GPIOF, GPIO_PIN_13);
 
-void UartMovingCar (void const * argument)
-{
-	  /* USER CODE BEGIN StartDefaultTask */
-	    BaseType_t xHigherPriorityWasTaken = pdFALSE;
-	    BaseType_t ret = pdTRUE;      // if semaphore is ret you know that isr give you queue
-	    signed char cByteRxed = '\0'; // this value is what you receive
-
-	  /* Infinite loop */
-		for (;;) {
-
-			/* Block until the next char is available. */
-			ret = xSemaphoreTakeFromISR(UartSemaHandle, &xHigherPriorityWasTaken);
-			if (ret == pdPASS) {
-				/* Handle character in QUEUE */
-				ret = xQueueReceiveFromISR(UartQueueHandle, &cByteRxed,
-						&xHigherPriorityWasTaken);
-				if (ret) {
-					// do something . . .
-					Move(cByteRxed - '0');
-				}
-			}
-			osDelay(50);
-		}
-		/* USER CODE END StartDefaultTask */
+    	osDelay(60);
+    }
+}
+void CheckingFront (void const * argument) {
+    /* Infinite loop */
+    for(;;)
+    {
+   	HCSR04_Read(&htim3, GPIOA, GPIO_PIN_5);
+    	osDelay(60);
+    }
+}
+void CheckingRight (void const * argument) {
+    /* Infinite loop */
+    for(;;)
+    {
+    	HCSR04_Read(&htim4, GPIOD, GPIO_PIN_13);
+    	osDelay(60);
+    }
 }
 
+void delay (uint16_t time, TIM_HandleTypeDef *htim)
+{
+	__HAL_TIM_SET_COUNTER(htim, 0);
+	while (__HAL_TIM_GET_COUNTER (htim) < time);
+
+}
+
+void HCSR04_Read (TIM_HandleTypeDef *htim, GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
+{
+
+	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, 1);	// pull the TRIG pin HIGH
+	delay(10, htim);  // wait for 10 us
+	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, 0);  // pull the TRIG pin low
+	__HAL_TIM_ENABLE_IT(htim, TIM_IT_CC1); // enable Interrupt
+}
+
+
+// CallBack Session
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   /* Prevent unused argument(s) compilation warning */
@@ -248,4 +427,68 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
    */
 }
 
+// calculate the distance of HC_SR04
+void HC_SRO4_Dis(TIM_HandleTypeDef *htim, int num) {
+
+	if (Is_First_Captured[num] == 0) // if the first rising edge is not captured
+	{
+		Is_First_Captured[num] = 1;  // set the first captured as true
+		IC_Val1[num] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); // read the first value
+//		IC_Val1[num] = htim->Instance->CNT; // read the first value
+		IC_Val2[num] = 0;
+//		__HAL_TIM_SET_CAPTUREPOLARITY(htim, htim->Channel, TIM_INPUTCHANNELPOLARITY_FALLING);
+	}
+
+	else   // If the first rising edge is captured, now we will capture the second edge
+	{
+		IC_Val2[num] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);  // read second value
+		//IC_Val2[num] = htim->Instance->CNT;
+
+		if (IC_Val2[num] > IC_Val1[num])
+		{
+			Difference[num] = IC_Val2[num]-IC_Val1[num];
+		}
+
+		else if (IC_Val1[num] > IC_Val2[num])
+		{
+
+			//TIM 1,3,4 is 16bit so overflow is occured when the cnt value is 0xffff
+			Difference[num] = (0xffff + IC_Val2[num]) - IC_Val1[num];
+		}
+
+//		frequency[num] = refClock/Difference[num];
+		Distance[num] = Difference[num]*340/2000;
+
+		//__HAL_TIM_SET_COUNTER(&htim3, 0);  // reset the counter
+//		htim->Instance->CNT = 0;
+
+//		__HAL_TIM_SET_CAPTUREPOLARITY(htim, htim->Channel, TIM_INPUTCHANNELPOLARITY_RISING);
+		Is_First_Captured[num] = 0; // set it back to false
+
+		//htim is address
+		__HAL_TIM_DISABLE_IT(htim, TIM_IT_CC1);
+	}
+}
+
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+	if (htim->Instance == TIM1) {
+		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+		{
+			HC_SRO4_Dis(htim, 0);
+		}
+	}
+	if (htim->Instance == TIM3) {
+		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+		{
+			HC_SRO4_Dis(htim, 1);
+		}
+	}
+	if (htim->Instance == TIM4) {
+		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+		{
+			HC_SRO4_Dis(htim, 2);
+		}
+	}
+}
 /* USER CODE END Application */
